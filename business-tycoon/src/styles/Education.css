@@ -1,0 +1,530 @@
+.education-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.education-container h2 {
+  margin-bottom: 25px;
+  color: #333;
+}
+
+.education-container h3 {
+  margin: 30px 0 20px;
+  color: #333;
+}
+
+/* Current education styles */
+.current-education {
+  background-color: #f0f8ff;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #b3d7ff;
+}
+
+.current-education h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #0066cc;
+  text-align: center;
+}
+
+.education-progress-container {
+  width: 100%;
+  height: 12px;
+  background-color: #e9ecef;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid #ced4da;
+}
+
+.education-progress-bar {
+  height: 100%;
+  background-color: #4CAF50;
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+  background-size: 1rem 1rem;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+  animation: progressAnimation 1s linear infinite;
+}
+
+.education-progress-details {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.education-progress-details p {
+  margin: 5px 10px;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.time-remaining {
+  font-weight: bold;
+  color: #0066cc !important;
+}
+
+@keyframes progressAnimation {
+  0% {
+    background-position: 1rem 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+.skills-overview {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 10px;
+}
+
+.skill-item {
+  background-color: #f0f8ff;
+  border-radius: 50px;
+  padding: 8px 15px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  border-left: 3px solid #4CAF50;
+}
+
+.skill-name {
+  font-weight: bold;
+  margin-right: 8px;
+  color: #333;
+}
+
+.skill-level {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.education-category {
+  margin-bottom: 30px;
+}
+
+.education-category h4 {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #343a40;
+  font-size: 18px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.education-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.education-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.education-card:hover:not(.cannot-afford):not(.disabled) {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.education-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.education-icon {
+  font-size: 24px;
+  margin-right: 15px;
+  color: #4CAF50;
+}
+
+.education-header h3 {
+  margin: 0;
+  text-align: left;
+  font-size: 18px;
+}
+
+.education-description {
+  color: #666;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.education-details {
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.education-details p {
+  margin: 3px 0;
+}
+
+.duration-note {
+  font-style: italic;
+  color: #666;
+  font-size: 12px;
+}
+
+.education-button {
+  width: 100%;
+  padding: 8px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.education-button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.education-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.cannot-afford {
+  opacity: 0.7;
+}
+
+.education-card.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.education-card.disabled::after {
+  content: "Complete current education first";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.education-card.disabled:hover::after {
+  opacity: 1;
+}
+
+.education-history {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 30px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.bonus {
+  color: #4CAF50;
+  font-weight: bold;
+  margin-top: 5px !important;
+}
+
+.key-education {
+  color: #0066cc;
+  font-weight: bold;
+  margin-top: 5px !important;
+}
+
+.bachelors-degree {
+  border: 2px solid #0066cc;
+  box-shadow: 0 4px 8px rgba(0, 102, 204, 0.2);
+}
+
+.section-header {
+  border-bottom: 2px solid #e9ecef;
+  margin: 30px 0 20px;
+  padding-bottom: 10px;
+  position: relative;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #343a40;
+  display: inline-block;
+}
+
+/* Job Training Styles */
+.job-training-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.no-job-message {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.current-job-info {
+  background-color: #f0f8ff;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-left: 4px solid #4CAF50;
+}
+
+.current-job-info h4 {
+  margin-top: 0;
+  color: #333;
+}
+
+.promotion-requirement {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #0066cc;
+}
+
+.career-path-selector {
+  margin-bottom: 25px;
+}
+
+.career-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.career-button {
+  padding: 8px 15px;
+  background-color: #f1f3f5;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.career-button:hover {
+  background-color: #e9ecef;
+}
+
+.career-button.current {
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.career-button.selected {
+  background-color: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+.career-progression {
+  margin-top: 25px;
+}
+
+.tier-container {
+  margin-bottom: 25px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tier-container.locked-tier {
+  opacity: 0.7;
+  background-color: #f8f9fa;
+  position: relative;
+}
+
+.tier-header {
+  background-color: #f8f9fa;
+  padding: 10px 15px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tier-header h5 {
+  margin: 0;
+  color: #495057;
+}
+
+.tier-requirement {
+  background-color: #dc3545;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.jobs-list {
+  padding: 15px;
+}
+
+.job-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+
+.job-item:last-child {
+  margin-bottom: 0;
+}
+
+.job-item.current-job {
+  border-left-color: #4CAF50;
+  background-color: #e8f5e9;
+  font-weight: bold;
+}
+
+.job-item.locked-job {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.job-title {
+  font-size: 14px;
+}
+
+.job-pay {
+  color: #4CAF50;
+  font-size: 14px;
+}
+
+.career-tips {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+  padding: 15px;
+  margin-top: 25px;
+}
+
+.career-tips h5 {
+  margin-top: 0;
+  color: #856404;
+}
+
+.career-tips ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.career-tips li {
+  margin-bottom: 5px;
+  color: #666;
+}
+
+/* Mobile view adjustments */
+@media (max-width: 768px) {
+  .education-container {
+    padding: 15px;
+  }
+  
+  .education-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .education-card {
+    padding: 10px;
+  }
+  
+  .education-header {
+    margin-bottom: 10px;
+  }
+  
+  .education-icon {
+    font-size: 20px;
+    margin-right: 10px;
+  }
+  
+  .education-header h3 {
+    font-size: 15px;
+  }
+  
+  .education-description {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .education-details {
+    font-size: 12px;
+  }
+  
+  .education-button {
+    padding: 6px;
+    font-size: 13px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .education-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .education-card {
+    padding: 8px;
+  }
+  
+  .education-icon {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+  
+  .education-header h3 {
+    font-size: 13px;
+  }
+  
+  .education-description {
+    display: none;
+  }
+  
+  .education-details p {
+    margin: 2px 0;
+    font-size: 11px;
+  }
+  
+  .education-button {
+    padding: 5px;
+    font-size: 12px;
+  }
+} 

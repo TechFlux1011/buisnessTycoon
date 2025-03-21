@@ -1,0 +1,358 @@
+.jobs-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f0f3f5;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.jobs-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.current-job-banner {
+  background-color: #e0f2f1;
+  border-left: 4px solid #26a69a;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.current-job-banner h3 {
+  margin-top: 0;
+  color: #00796b;
+}
+
+.current-job-banner p {
+  margin: 5px 0;
+  color: #00796b;
+}
+
+.job-listings {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.job-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-top: 4px solid #ccc;
+  display: flex;
+  flex-direction: column;
+}
+
+.job-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.job-card.executive-level {
+  border-top-color: #9c27b0;
+}
+
+.job-card.senior-level {
+  border-top-color: #f44336;
+}
+
+.job-card.mid-level {
+  border-top-color: #ff9800;
+}
+
+.job-card.entry-level {
+  border-top-color: #4caf50;
+}
+
+.job-card.pending {
+  position: relative;
+  box-shadow: 0 0 15px rgba(66, 135, 245, 0.5);
+}
+
+.job-card.pending::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #4287f5, transparent);
+  animation: loadingBar 2s infinite linear;
+}
+
+@keyframes loadingBar {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.job-icon {
+  font-size: 28px;
+  margin-right: 15px;
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.executive-level .job-icon {
+  color: #9c27b0;
+  background-color: rgba(156, 39, 176, 0.1);
+  border-color: rgba(156, 39, 176, 0.3);
+}
+
+.senior-level .job-icon {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+  border-color: rgba(244, 67, 54, 0.3);
+}
+
+.mid-level .job-icon {
+  color: #ff9800;
+  background-color: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.entry-level .job-icon {
+  color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.job-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.job-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  flex: 1;
+}
+
+.job-badge {
+  font-size: 0.7rem;
+  padding: 3px 6px;
+  border-radius: 3px;
+  color: white;
+  margin-right: 8px;
+  align-self: flex-start;
+}
+
+.job-badge.executive {
+  background-color: #9c27b0;
+}
+
+.job-badge.senior {
+  background-color: #f44336;
+}
+
+.job-badge.mid {
+  background-color: #ff9800;
+}
+
+.job-badge.entry {
+  background-color: #4caf50;
+}
+
+.job-badge.owner {
+  background-color: #9c27b0;
+}
+
+.job-description {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.job-field {
+  font-size: 0.85rem;
+  color: #444;
+  margin-bottom: 5px;
+  font-style: italic;
+}
+
+.job-pay {
+  font-weight: bold;
+  color: #2196f3;
+  margin-bottom: 5px;
+}
+
+.job-click-value {
+  font-size: 0.85rem;
+  color: #4caf50;
+  margin-bottom: 15px;
+}
+
+.job-requirements {
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.job-requirements h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.job-requirements ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0 0 10px 0;
+}
+
+.job-requirements li {
+  font-size: 0.85rem;
+  padding: 4px 0;
+  color: #666;
+}
+
+.job-requirements li.met {
+  color: #4caf50;
+}
+
+.job-requirements li.not-met {
+  color: #f44336;
+}
+
+.qualification-status {
+  font-size: 0.85rem;
+  padding: 5px 8px;
+  border-radius: 4px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.qualification-status.qualified {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #2e7d32;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.qualification-status.not-qualified {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #c62828;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.apply-button {
+  margin-top: auto;
+  padding: 8px 12px;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.apply-button:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+.apply-button:disabled {
+  background-color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.apply-button.pending {
+  background-color: #4287f5;
+  cursor: wait;
+  opacity: 0.8;
+}
+
+/* Section headers */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+  position: relative;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.job-header-top {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.job-badge {
+  font-size: 0.7rem;
+  padding: 3px 6px;
+  border-radius: 3px;
+  color: white;
+  margin-right: 8px;
+}
+
+.current-job-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.current-job-header .job-icon {
+  color: #00796b;
+  background-color: rgba(0, 121, 107, 0.1);
+  border-color: rgba(0, 121, 107, 0.3);
+  width: 45px;
+  height: 45px;
+  font-size: 30px;
+}
+
+.current-job-header h3 {
+  margin: 0;
+  color: #00796b;
+}
+
+.application-result {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+  animation: fadeIn 0.5s;
+}
+
+.application-result.success {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #2e7d32;
+  border: 1px solid #2e7d32;
+}
+
+.application-result.failure {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #c62828;
+  border: 1px solid #c62828;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+} 

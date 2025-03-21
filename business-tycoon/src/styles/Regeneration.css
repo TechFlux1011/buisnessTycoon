@@ -1,0 +1,112 @@
+.regeneration-container {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #f8d7da;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  animation: pulse 2s infinite;
+}
+
+.regeneration-prompt,
+.regeneration-confirmation {
+  text-align: center;
+}
+
+.regeneration-container h2 {
+  color: #721c24;
+  margin-bottom: 15px;
+  font-size: 24px;
+}
+
+.regeneration-container p {
+  color: #721c24;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.inheritance-info,
+.background-info {
+  font-weight: bold;
+}
+
+.regeneration-button,
+.confirm-button,
+.cancel-button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 16px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  margin: 0 10px;
+}
+
+.regeneration-button,
+.confirm-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.regeneration-button:hover,
+.confirm-button:hover {
+  background-color: #c82333;
+}
+
+.cancel-button {
+  background-color: #6c757d;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #5a6268;
+}
+
+.confirmation-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
+.regeneration-details {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.regeneration-details p {
+  margin: 5px 0;
+  color: #ddd;
+}
+
+.next-gen-info {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.next-gen-title {
+  font-weight: bold;
+  color: #ffcc00 !important;
+  margin-bottom: 10px !important;
+}
+
+.bonus-info {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #4dff4d !important;
+} 
