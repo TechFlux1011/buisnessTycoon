@@ -14,51 +14,51 @@ export const marketSectors = [
   { id: 'aerospace', name: 'Aerospace', description: 'Aviation and space exploration companies.' },
 ];
 
-// Stock price volatility factors
+// Stock price volatility factors - refined to match real-world behavior
 export const volatilityFactors = {
-  MARKET_SENTIMENT: { min: -0.015, max: 0.015 },  // Overall market movement
-  NEWS_EVENTS: { min: -0.08, max: 0.08 },       // Random major events
-  EARNINGS_IMPACT: { min: -0.12, max: 0.12 },    // Quarterly results
-  PLAYER_ACTIONS: { min: -0.03, max: 0.03 },     // Player's game actions
-  SECTOR_TRENDS: {                              // Sector-specific trends
-    tech: { min: -0.025, max: 0.025 },
-    retail: { min: -0.015, max: 0.015 },
-    finance: { min: -0.012, max: 0.012 },
-    auto: { min: -0.018, max: 0.018 },
-    media: { min: -0.02, max: 0.02 },
-    energy: { min: -0.022, max: 0.022 },
-    health: { min: -0.016, max: 0.016 },
-    food: { min: -0.01, max: 0.01 },
-    telecom: { min: -0.014, max: 0.014 },
-    aerospace: { min: -0.024, max: 0.024 },
+  MARKET_SENTIMENT: { min: -0.008, max: 0.008 },  // Overall market movement - more conservative
+  NEWS_EVENTS: { min: -0.05, max: 0.05 },        // Random major events - slightly reduced
+  EARNINGS_IMPACT: { min: -0.10, max: 0.08 },    // Quarterly results - asymmetric impact (missing hurts more than beating helps)
+  PLAYER_ACTIONS: { min: -0.02, max: 0.02 },     // Player's game actions
+  SECTOR_TRENDS: {                              // Sector-specific trends - adjusted to realistic levels
+    tech: { min: -0.015, max: 0.018 },          // Tech tends to be more volatile with upside bias
+    retail: { min: -0.010, max: 0.011 },        // Retail is more moderate
+    finance: { min: -0.008, max: 0.009 },        // Finance tends to be more stable
+    auto: { min: -0.013, max: 0.014 },          // Auto has moderate volatility
+    media: { min: -0.014, max: 0.015 },         // Media has higher volatility
+    energy: { min: -0.016, max: 0.013 },        // Energy is volatile with slight downside bias
+    health: { min: -0.009, max: 0.011 },        // Healthcare is relatively stable with upside potential
+    food: { min: -0.007, max: 0.008 },          // Food is most stable, defensive sector
+    telecom: { min: -0.008, max: 0.009 },       // Telecom is relatively stable
+    aerospace: { min: -0.018, max: 0.015 },     // Aerospace is volatile
   }
 };
 
 // Market news that can affect stock prices
 export const marketNewsEvents = [
-  { headline: "Fed announces surprise interest rate hike", impact: "negative", sectors: ["finance", "retail"], magnitude: 0.05 },
-  { headline: "Breakthrough in quantum computing announced", impact: "positive", sectors: ["tech"], magnitude: 0.08 },
-  { headline: "Data privacy scandal rocks social media companies", impact: "negative", sectors: ["tech", "media"], magnitude: 0.07 },
-  { headline: "New renewable energy tax credits approved", impact: "positive", sectors: ["energy"], magnitude: 0.06 },
-  { headline: "Automotive chip shortage worsens", impact: "negative", sectors: ["auto", "tech"], magnitude: 0.045 },
-  { headline: "Streaming services see record subscriber growth", impact: "positive", sectors: ["media"], magnitude: 0.055 },
-  { headline: "Healthcare reform bill passes", impact: "mixed", sectors: ["health"], magnitude: 0.04 },
-  { headline: "Global supply chain disruptions continue", impact: "negative", sectors: ["retail", "auto", "food"], magnitude: 0.05 },
-  { headline: "New AI breakthrough announced", impact: "positive", sectors: ["tech"], magnitude: 0.07 },
-  { headline: "Consumer spending reaches all-time high", impact: "positive", sectors: ["retail", "food"], magnitude: 0.035 },
-  { headline: "Major cybersecurity breach reported", impact: "negative", sectors: ["tech", "finance"], magnitude: 0.06 },
-  { headline: "Space tourism takes off", impact: "positive", sectors: ["aerospace"], magnitude: 0.09 },
-  { headline: "Fast food workers announce nationwide strike", impact: "negative", sectors: ["food"], magnitude: 0.04 },
-  { headline: "Mobile payment usage skyrockets", impact: "positive", sectors: ["finance", "tech"], magnitude: 0.045 },
-  { headline: "Self-driving car achieves safety milestone", impact: "positive", sectors: ["auto", "tech"], magnitude: 0.055 },
-  { headline: "Streaming price wars intensify", impact: "mixed", sectors: ["media"], magnitude: 0.035 },
-  { headline: "Generic drug approvals accelerate", impact: "negative", sectors: ["health"], magnitude: 0.04 },
-  { headline: "5G rollout exceeds expectations", impact: "positive", sectors: ["telecom", "tech"], magnitude: 0.05 },
-  { headline: "Oil reserves discovery announced", impact: "positive", sectors: ["energy"], magnitude: 0.065 },
-  { headline: "Record inflation reported", impact: "negative", sectors: ["retail", "food", "finance"], magnitude: 0.055 },
+  { headline: "Fed announces surprise interest rate hike", impact: "negative", sectors: ["finance", "retail"], magnitude: 0.03 },
+  { headline: "Breakthrough in quantum computing announced", impact: "positive", sectors: ["tech"], magnitude: 0.04 },
+  { headline: "Data privacy scandal rocks social media companies", impact: "negative", sectors: ["tech", "media"], magnitude: 0.05 },
+  { headline: "New renewable energy tax credits approved", impact: "positive", sectors: ["energy"], magnitude: 0.03 },
+  { headline: "Automotive chip shortage worsens", impact: "negative", sectors: ["auto", "tech"], magnitude: 0.035 },
+  { headline: "Streaming services see record subscriber growth", impact: "positive", sectors: ["media"], magnitude: 0.04 },
+  { headline: "Healthcare reform bill passes", impact: "mixed", sectors: ["health"], magnitude: 0.025 },
+  { headline: "Global supply chain disruptions continue", impact: "negative", sectors: ["retail", "auto", "food"], magnitude: 0.03 },
+  { headline: "New AI breakthrough announced", impact: "positive", sectors: ["tech"], magnitude: 0.045 },
+  { headline: "Consumer spending reaches all-time high", impact: "positive", sectors: ["retail", "food"], magnitude: 0.025 },
+  { headline: "Major cybersecurity breach reported", impact: "negative", sectors: ["tech", "finance"], magnitude: 0.04 },
+  { headline: "Space tourism takes off", impact: "positive", sectors: ["aerospace"], magnitude: 0.055 },
+  { headline: "Fast food workers announce nationwide strike", impact: "negative", sectors: ["food"], magnitude: 0.025 },
+  { headline: "Mobile payment usage skyrockets", impact: "positive", sectors: ["finance", "tech"], magnitude: 0.03 },
+  { headline: "Self-driving car achieves safety milestone", impact: "positive", sectors: ["auto", "tech"], magnitude: 0.035 },
+  { headline: "Streaming price wars intensify", impact: "mixed", sectors: ["media"], magnitude: 0.02 },
+  { headline: "Generic drug approvals accelerate", impact: "negative", sectors: ["health"], magnitude: 0.025 },
+  { headline: "5G rollout exceeds expectations", impact: "positive", sectors: ["telecom", "tech"], magnitude: 0.03 },
+  { headline: "Oil reserves discovery announced", impact: "positive", sectors: ["energy"], magnitude: 0.035 },
+  { headline: "Record inflation reported", impact: "negative", sectors: ["retail", "food", "finance"], magnitude: 0.035 },
 ];
 
-// Stock market companies data
+// Stock market companies data - updated with realistic financial metrics
 export const companies = [
   // TECH SECTOR
   {
@@ -66,20 +66,24 @@ export const companies = [
     name: 'MicroWeave',
     fullName: 'MicroWeave Technologies, Inc.',
     sector: 'tech',
-    basePrice: 285.75,
-    volatility: 0.015,
+    basePrice: 337.50,
+    volatility: 0.012,
     description: 'Leading software company known for office productivity tools and operating systems.',
     logo: '🪟',
-    marketCap: 2150000000000,
-    totalShares: 7524650000,
+    marketCap: 2507000000000,
+    totalShares: 7428400000,
+    pe: 35.8,
+    revenue: 211900000000,
+    dividendYield: 0.73,
+    beta: 0.94,
     events: {
       earnings: { day: 25, month: [1, 4, 7, 10] }, // Quarterly earnings on the 25th
       dividend: { day: 10, month: [2, 5, 8, 11], amount: 0.62 } // Quarterly dividend on the 10th
     },
     news: [
-      { headline: "MicroWeave announces new cloud partnership", impact: 0.027, probability: 0.05 },
-      { headline: "MicroWeave OS security flaw discovered", impact: -0.032, probability: 0.03 },
-      { headline: "MicroWeave acquires AI startup", impact: 0.041, probability: 0.04 }
+      { headline: "MicroWeave announces new cloud partnership", impact: 0.018, probability: 0.05 },
+      { headline: "MicroWeave OS security flaw discovered", impact: -0.025, probability: 0.03 },
+      { headline: "MicroWeave acquires AI startup", impact: 0.022, probability: 0.04 }
     ]
   },
   {
@@ -87,20 +91,24 @@ export const companies = [
     name: 'Pear',
     fullName: 'Pear Inc.',
     sector: 'tech',
-    basePrice: 172.40,
-    volatility: 0.018,
+    basePrice: 182.85,
+    volatility: 0.014,
     description: 'Consumer electronics, software and services company with a dedicated following.',
     logo: '🍐',
-    marketCap: 2780000000000,
-    totalShares: 16125290000,
+    marketCap: 2876000000000,
+    totalShares: 15729000000,
+    pe: 30.2,
+    revenue: 383300000000,
+    dividendYield: 0.52,
+    beta: 1.15,
     events: {
       earnings: { day: 15, month: [2, 5, 8, 11] },
       dividend: { day: 5, month: [2, 5, 8, 11], amount: 0.24 }
     },
     news: [
-      { headline: "Pear unveils next-gen smartphone", impact: 0.045, probability: 0.05 },
-      { headline: "Pear production delays reported", impact: -0.038, probability: 0.03 },
-      { headline: "Pear services growth exceeds expectations", impact: 0.033, probability: 0.04 }
+      { headline: "Pear unveils next-gen smartphone", impact: 0.032, probability: 0.05 },
+      { headline: "Pear production delays reported", impact: -0.028, probability: 0.03 },
+      { headline: "Pear services growth exceeds expectations", impact: 0.024, probability: 0.04 }
     ]
   },
   {
@@ -108,20 +116,24 @@ export const companies = [
     name: 'Boogle',
     fullName: 'Boogle LLC',
     sector: 'tech',
-    basePrice: 138.20,
-    volatility: 0.016,
+    basePrice: 143.65,
+    volatility: 0.013,
     description: 'Search engine and digital advertising giant with diverse technology interests.',
     logo: '🔍',
-    marketCap: 1740000000000,
-    totalShares: 12590450000,
+    marketCap: 1832000000000,
+    totalShares: 12754000000,
+    pe: 26.3,
+    revenue: 282800000000,
+    dividendYield: 0,
+    beta: 1.08,
     events: {
       earnings: { day: 20, month: [1, 4, 7, 10] },
       dividend: null
     },
     news: [
-      { headline: "Boogle facing new antitrust lawsuit", impact: -0.042, probability: 0.035 },
-      { headline: "Boogle AI assistant capabilities expanded", impact: 0.036, probability: 0.04 },
-      { headline: "Boogle ad revenue hits record high", impact: 0.039, probability: 0.045 }
+      { headline: "Boogle facing new antitrust lawsuit", impact: -0.031, probability: 0.035 },
+      { headline: "Boogle AI assistant capabilities expanded", impact: 0.027, probability: 0.04 },
+      { headline: "Boogle ad revenue hits record high", impact: 0.024, probability: 0.045 }
     ]
   },
   {
@@ -129,20 +141,24 @@ export const companies = [
     name: 'Jungle',
     fullName: 'Jungle Marketplace, Inc.',
     sector: 'retail',
-    basePrice: 131.15,
-    volatility: 0.02,
+    basePrice: 128.75,
+    volatility: 0.016,
     description: 'E-commerce and cloud computing giant with expanding interests in various industries.',
     logo: '📦',
-    marketCap: 1350000000000,
-    totalShares: 10292800000,
+    marketCap: 1324000000000,
+    totalShares: 10284000000,
+    pe: 59.5,
+    revenue: 513900000000,
+    dividendYield: 0,
+    beta: 1.22,
     events: {
       earnings: { day: 28, month: [1, 4, 7, 10] },
       dividend: null
     },
     news: [
-      { headline: "Jungle opens new fulfillment centers", impact: 0.028, probability: 0.04 },
-      { headline: "Jungle cloud division reports record growth", impact: 0.046, probability: 0.05 },
-      { headline: "Jungle workers plan strike at multiple locations", impact: -0.038, probability: 0.03 }
+      { headline: "Jungle opens new fulfillment centers", impact: 0.021, probability: 0.04 },
+      { headline: "Jungle cloud division reports record growth", impact: 0.032, probability: 0.05 },
+      { headline: "Jungle workers plan strike at multiple locations", impact: -0.027, probability: 0.03 }
     ]
   },
   {
@@ -150,20 +166,24 @@ export const companies = [
     name: 'FaceScroll',
     fullName: 'MetaBook, Inc.',
     sector: 'media',
-    basePrice: 295.30,
-    volatility: 0.022,
+    basePrice: 312.75,
+    volatility: 0.018,
     description: 'Social media conglomerate focusing on virtual reality and connectivity.',
     logo: '👥',
-    marketCap: 760000000000,
-    totalShares: 2573654000,
+    marketCap: 807000000000,
+    totalShares: 2581000000,
+    pe: 28.1,
+    revenue: 134900000000,
+    dividendYield: 0,
+    beta: 1.35,
     events: {
       earnings: { day: 22, month: [1, 4, 7, 10] },
       dividend: null
     },
     news: [
-      { headline: "FaceScroll faces new privacy regulations", impact: -0.035, probability: 0.04 },
-      { headline: "FaceScroll virtual reality sales surge", impact: 0.041, probability: 0.035 },
-      { headline: "FaceScroll user growth stagnates", impact: -0.029, probability: 0.03 }
+      { headline: "FaceScroll faces new privacy regulations", impact: -0.024, probability: 0.04 },
+      { headline: "FaceScroll virtual reality sales surge", impact: 0.031, probability: 0.035 },
+      { headline: "FaceScroll user growth stagnates", impact: -0.022, probability: 0.03 }
     ]
   },
   {
@@ -171,20 +191,24 @@ export const companies = [
     name: 'Webflix',
     fullName: 'Webflix Streaming Services, Inc.',
     sector: 'media',
-    basePrice: 388.65,
-    volatility: 0.025,
+    basePrice: 417.25,
+    volatility: 0.019,
     description: 'Streaming entertainment service with global reach and original content production.',
     logo: '🎬',
-    marketCap: 172800000000,
-    totalShares: 444619000,
+    marketCap: 185500000000,
+    totalShares: 444600000,
+    pe: 44.8,
+    revenue: 33700000000,
+    dividendYield: 0,
+    beta: 1.27,
     events: {
       earnings: { day: 18, month: [1, 4, 7, 10] },
       dividend: null
     },
     news: [
-      { headline: "Webflix subscriber numbers exceed expectations", impact: 0.058, probability: 0.04 },
-      { headline: "Webflix raises subscription prices", impact: -0.032, probability: 0.045 },
-      { headline: "Webflix original series wins major awards", impact: 0.037, probability: 0.035 }
+      { headline: "Webflix subscriber numbers exceed expectations", impact: 0.043, probability: 0.04 },
+      { headline: "Webflix raises subscription prices", impact: -0.024, probability: 0.045 },
+      { headline: "Webflix original series wins major awards", impact: 0.027, probability: 0.035 }
     ]
   },
   {
@@ -192,20 +216,24 @@ export const companies = [
     name: 'Coil',
     fullName: 'Coil Motors, Inc.',
     sector: 'auto',
-    basePrice: 247.20,
-    volatility: 0.035,
+    basePrice: 235.45,
+    volatility: 0.028,
     description: 'Electric vehicle manufacturer also involved in renewable energy and space exploration.',
     logo: '⚡',
-    marketCap: 785900000000,
-    totalShares: 3178803000,
+    marketCap: 748600000000,
+    totalShares: 3179000000,
+    pe: 78.4,
+    revenue: 96800000000,
+    dividendYield: 0,
+    beta: 1.92,
     events: {
       earnings: { day: 26, month: [1, 4, 7, 10] },
       dividend: null
     },
     news: [
-      { headline: "Coil announces revolutionary new battery technology", impact: 0.068, probability: 0.03 },
-      { headline: "Coil production misses targets", impact: -0.052, probability: 0.04 },
-      { headline: "Coil expands charging network globally", impact: 0.045, probability: 0.035 }
+      { headline: "Coil announces revolutionary new battery technology", impact: 0.052, probability: 0.03 },
+      { headline: "Coil production misses targets", impact: -0.046, probability: 0.04 },
+      { headline: "Coil expands charging network globally", impact: 0.038, probability: 0.035 }
     ]
   },
   {

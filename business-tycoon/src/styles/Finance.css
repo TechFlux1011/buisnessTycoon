@@ -18,6 +18,50 @@
   animation: purchaseSuccess 0.6s ease-in-out;
 }
 
+/* NOW Average styles */
+.now-average-container {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.now-average-container:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--bg-tertiary);
+}
+
+.now-average-chart {
+  transition: opacity 0.3s ease;
+}
+
+.now-average-container:hover .now-average-chart {
+  opacity: 1;
+}
+
+.dark .now-average-container {
+  background: linear-gradient(to right, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .now-average-container:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  border-color: var(--accent-blue);
+}
+
+.now-average-chart-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.dark .now-average-chart-container {
+  background: rgba(15, 23, 42, 0.5);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 /* Investment cards hover effects */
 .investment-card {
   transition: transform 0.2s, box-shadow 0.2s;
@@ -722,4 +766,51 @@
     padding: 4px 8px;
     font-size: 0.75rem;
   }
+}
+
+/* Refresh button styling */
+.refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.refresh-button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.refresh-button:active {
+  transform: scale(0.95);
+}
+
+/* Refresh animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.refreshing svg {
+  animation: spin 1s linear infinite;
+}
+
+/* Data refresh animation */
+@keyframes flash-update {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(59, 130, 246, 0.2); }
+}
+
+.data-refreshed {
+  animation: flash-update 0.8s ease-out;
+}
+
+.dark .data-refreshed {
+  animation: flash-update-dark 0.8s ease-out;
+}
+
+@keyframes flash-update-dark {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(59, 130, 246, 0.15); }
 } 

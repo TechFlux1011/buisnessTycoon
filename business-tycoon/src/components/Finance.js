@@ -36,8 +36,24 @@ const Finance = () => {
   // Add state to track window size for responsive charts
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   
+  // Add state for NOW Average chart data
+  const [nowAverageChartData, setNowAverageChartData] = useState([]);
+  
+  // Add timer state for modal refresh
+  const [lastModalRefresh, setLastModalRefresh] = useState(Date.now());
+  const [modalRefreshCount, setModalRefreshCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showRefreshAnimation, setShowRefreshAnimation] = useState(false);
+  
+  // Add these state variables near the other state variables
+  const [betAmount, setBetAmount] = useState(100);
+  const [showBettingUI, setShowBettingUI] = useState(false);
+  const [activeBets, setActiveBets] = useState([]);
+  const [priceMovementHistory, setPriceMovementHistory] = useState({});
+  
   const tickerRef = useRef(null);
   const modalRef = useRef(null);
+  const modalRefreshTimer = useRef(null);
   
   const sectors = useMemo(() => {
     const uniqueSectors = new Set(stockMarket.companies.map(company => company.sector));
@@ -149,6 +165,166 @@ const Finance = () => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Render NOW Average display
+  const renderNOWAverage = () => {
+    const { nowAverage } = stockMarket;
+    
+    // Ensure we have data
+    if (!nowAverage) return null;
+    
+    // Get color based on trending direction
+    const valueColor = nowAverage.trending === 'up' ? 'text-green-500' : 
+                       nowAverage.trending === 'down' ? 'text-red-500' : 
+                       'text-gray-700';
+    
+    // Dark mode compatible colors
+    const darkValueColor = nowAverage.trending === 'up' ? 'dark:text-green-400' : 
+                          nowAverage.trending === 'down' ? 'dark:text-red-400' : 
+                          'dark:text-gray-300';
+    
+    return (
+      <div className="now-average-container bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+              NOW Average
+              <span className={`ml-2 text-sm px-2 py-1 rounded ${
+                nowAverage.trending === 'up' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
+                nowAverage.trending === 'down' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+              }`}>
+                {nowAverage.trending === 'up' ? 'Bullish' : 
+                 nowAverage.trending === 'down' ? 'Bearish' : 
+                 'Stable'}
+              </span>
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {nowAverage.description}
+            </p>
+          </div>
+          
+          <div className="mt-2 md:mt-0 flex flex-col items-end">
+            <div className={`text-2xl font-bold ${valueColor} ${darkValueColor}`}>
+              ${nowAverage.currentValue.toFixed(2)}
+            </div>
+            <div className={`flex items-center ${nowAverage.percentChange >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+              <span>
+                {nowAverage.percentChange >= 0 ? '+' : ''}
+                {nowAverage.percentChange.toFixed(2)}%
+              </span>
+              {nowAverage.percentChange > 0 ? (
+                <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              ) : nowAverage.percentChange < 0 ? (
+                <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        
+        {/* NOW Average Chart */}
+        <div className="now-average-chart-container h-32 md:h-48">
+          {renderNOWAverageChart()}
+        </div>
+      </div>
+    );
+  };
+  
+  // Render NOW Average chart
+  const renderNOWAverageChart = () => {
+    if (!stockMarket.nowAverage || !stockMarket.nowAverage.valueHistory) {
+      return <div className="flex items-center justify-center h-full">Loading chart data...</div>;
+    }
+    
+    const { valueHistory, percentChange } = stockMarket.nowAverage;
+    
+    // Chart dimensions
+    const chartHeight = 130;
+    const chartWidth = '100%';
+    
+    // Find min and max for scaling
+    const minValue = Math.min(...valueHistory);
+    const maxValue = Math.max(...valueHistory);
+    const valueRange = maxValue - minValue || 1; // Prevent division by zero
+    
+    // Create points for SVG polyline - using percentage width for responsive scaling
+    const points = valueHistory.map((value, index) => {
+      const x = `${(index / (valueHistory.length - 1)) * 100}%`;
+      // Invert Y coordinate for SVG (0 is top)
+      const y = chartHeight - ((value - minValue) / valueRange) * chartHeight;
+      return `${x},${y}`;
+    }).join(' ');
+    
+    // Determine line color based on trend
+    const lineColor = percentChange >= 0 ? 'var(--accent-green, #22c55e)' : 'var(--accent-red, #ef4444)';
+    const fillColor = percentChange >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+    
+    // Grid lines
+    const gridLines = [];
+    for (let i = 1; i < 5; i++) {
+      const y = (i * chartHeight) / 5;
+      gridLines.push(
+        <line
+          key={`grid-${i}`}
+          x1="0"
+          y1={y}
+          x2="100%"
+          y2={y}
+          stroke="var(--chart-grid-color, rgba(0, 0, 0, 0.05))"
+          strokeWidth="1"
+          strokeDasharray="5,5"
+        />
+      );
+    }
+    
+    return (
+      <div className="w-full h-full relative">
+        <svg 
+          width={chartWidth} 
+          height={chartHeight} 
+          className="now-average-chart"
+          preserveAspectRatio="none"
+        >
+          {/* Grid lines */}
+          {gridLines}
+          
+          {/* Area fill under the line */}
+          <polygon
+            points={`${points} 100%,${chartHeight} 0,${chartHeight}`}
+            fill={fillColor}
+          />
+          
+          {/* Line chart */}
+          <polyline
+            points={points}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth="2"
+          />
+          
+          {/* Only show dot at the end of the line, consistent with stock charts */}
+          <circle 
+            cx={`100%`}
+            cy={chartHeight - ((valueHistory[valueHistory.length - 1] - minValue) / valueRange) * chartHeight}
+            r="3" 
+            fill={lineColor} 
+          />
+        </svg>
+        
+        {/* Value labels */}
+        <div className="absolute top-0 right-0 text-xs text-gray-500 dark:text-gray-400">
+          ${maxValue.toFixed(2)}
+        </div>
+        <div className="absolute bottom-0 right-0 text-xs text-gray-500 dark:text-gray-400">
+          ${minValue.toFixed(2)}
         </div>
       </div>
     );
@@ -376,22 +552,115 @@ const Finance = () => {
     // Store the stock ID to track changes
     setLastSelectedStockId(company.id);
     
-    // Generate chart data for only the last hour and store in state
-    if (company.realWorldPriceHistory && company.realWorldPriceHistory.length > 0) {
-      // Use real-world data, but limit to points that would represent the last hour
-      const lastHourPoints = 60; // More detailed for the modal - one point per minute
-      setModalChartData(company.realWorldPriceHistory.slice(-lastHourPoints));
+    // Reset refresh timer
+    setLastModalRefresh(Date.now());
+    setModalRefreshCount(0);
+    
+    // Initialize chart data using actual price history if available
+    if (company.priceHistory && company.priceHistory.length > 0) {
+      // Use actual historical data, limiting to 60 points
+      const historyPoints = Math.min(60, company.priceHistory.length);
+      setModalChartData(company.priceHistory.slice(-historyPoints));
     } else {
-      // Generate detailed data for the last hour only
-      const lastHourPoints = 60; // One point per minute
-      
-      const generatedData = company.priceHistory.length >= lastHourPoints 
-        ? company.priceHistory.slice(-lastHourPoints) 
-        : generateLastHourPriceData(company, lastHourPoints);
+      // Start with current price if no history exists
+      setModalChartData([company.currentPrice]);
+    }
+    
+    // Reset the betting UI
+    setShowBettingUI(false);
+  };
+  
+  // Function to update modal chart data
+  const updateModalChartData = (company) => {
+    if (!company) return;
+    
+    // If we already have chart data, just append the latest price
+    if (modalChartData && lastSelectedStockId === company.id) {
+      // Only add a new point if the price has changed
+      const lastPoint = modalChartData[modalChartData.length - 1];
+      if (lastPoint !== company.currentPrice) {
+        // Append the new price to the existing data
+        const updatedData = [...modalChartData, company.currentPrice];
         
-      setModalChartData(generatedData);
+        // Keep the last 60 points (representing 30 minutes if each point is 30 seconds)
+        if (updatedData.length > 60) {
+          setModalChartData(updatedData.slice(-60));
+        } else {
+          setModalChartData(updatedData);
+        }
+      }
+    } else {
+      // Initialize with historical data if available, or create a starting point
+      if (company.priceHistory && company.priceHistory.length > 0) {
+        // Use actual historical data, limiting to 60 points
+        const historyPoints = Math.min(60, company.priceHistory.length);
+        setModalChartData(company.priceHistory.slice(-historyPoints));
+      } else {
+        // Start with current price if no history exists
+        setModalChartData([company.currentPrice]);
+      }
     }
   };
+  
+  // Update selected stock data every 30 seconds when modal is open
+  useEffect(() => {
+    if (showTradeModal && selectedStock) {
+      // Clear any existing timer
+      if (modalRefreshTimer.current) {
+        clearInterval(modalRefreshTimer.current);
+      }
+      
+      // Set up a new timer for 30-second refresh
+      modalRefreshTimer.current = setInterval(() => {
+        // Set refreshing state
+        setIsRefreshing(true);
+        
+        // Find the latest data for the selected stock
+        const updatedStock = stockMarket.companies.find(c => c.id === selectedStock.id);
+        
+        if (updatedStock) {
+          // Update the selected stock with fresh data
+          setSelectedStock(updatedStock);
+          
+          // Only add new price point to existing chart data without regenerating entire chart
+          if (modalChartData && modalChartData.length > 0) {
+            const lastPrice = modalChartData[modalChartData.length - 1];
+            if (updatedStock.currentPrice !== lastPrice) {
+              const updatedChartData = [...modalChartData, updatedStock.currentPrice];
+              // Keep only the last 60 points
+              if (updatedChartData.length > 60) {
+                setModalChartData(updatedChartData.slice(-60));
+              } else {
+                setModalChartData(updatedChartData);
+              }
+            }
+          } else {
+            // Initialize chart data if it doesn't exist
+            setModalChartData([updatedStock.currentPrice]);
+          }
+          
+          // Update refresh count for UI feedback
+          setModalRefreshCount(prev => prev + 1);
+          setLastModalRefresh(Date.now());
+          
+          // Show refresh animation
+          setShowRefreshAnimation(true);
+          setTimeout(() => setShowRefreshAnimation(false), 800);
+        }
+        
+        // Reset refreshing state
+        setTimeout(() => setIsRefreshing(false), 500);
+      }, 30000); // 30 seconds
+      
+      // Clean up interval when modal closes or component unmounts
+      return () => {
+        if (modalRefreshTimer.current) {
+          clearInterval(modalRefreshTimer.current);
+          modalRefreshTimer.current = null;
+        }
+      };
+    }
+  }, [showTradeModal, selectedStock?.id, stockMarket.companies, modalChartData]);
   
   // Handle trade execution
   const executeTrade = () => {
@@ -458,48 +727,42 @@ const Finance = () => {
     const chartWidth = Math.min(450, windowWidth - 60); // Adjust for mobile
     
     // Use stored chart data for consistency between renders
-    let hourlyPriceData;
+    let priceData;
     
-    // If the selected stock changed or we don't have data yet, update modal chart data
-    if (lastSelectedStockId !== company.id || !modalChartData) {
-      if (company.realWorldPriceHistory && company.realWorldPriceHistory.length > 0) {
-        const lastHourPoints = 60; // One point per minute
-        hourlyPriceData = company.realWorldPriceHistory.slice(-lastHourPoints);
-      } else {
-        const lastHourPoints = 60; // One point per minute
-        
-        hourlyPriceData = company.priceHistory.length >= lastHourPoints 
-          ? company.priceHistory.slice(-lastHourPoints) 
-          : generateLastHourPriceData(company, lastHourPoints);
-      }
-      
-      // Update state for next render
-      setModalChartData(hourlyPriceData);
-      setLastSelectedStockId(company.id);
+    // If we don't have modal chart data yet, initialize it
+    if (lastSelectedStockId !== company.id || !modalChartData || modalChartData.length === 0) {
+      // Initialize modal chart data if needed
+      updateModalChartData(company);
+      priceData = [company.currentPrice]; // Start with at least one point
     } else {
-      // Use the cached data
-      hourlyPriceData = modalChartData;
+      // Use the existing historical data
+      priceData = modalChartData;
+    }
+    
+    // Ensure we have at least two points for drawing a line
+    if (priceData.length === 1) {
+      priceData = [priceData[0], priceData[0]];
     }
     
     // Find min and max for scaling
-    const minPrice = Math.min(...hourlyPriceData);
-    const maxPrice = Math.max(...hourlyPriceData);
-    const priceRange = maxPrice - minPrice;
+    const minPrice = Math.min(...priceData);
+    const maxPrice = Math.max(...priceData);
+    const priceRange = maxPrice - minPrice || 1; // Prevent division by zero
     
     // Round min and max for better readability in axes
     const roundedMin = Math.floor(minPrice * 0.998);
     const roundedMax = Math.ceil(maxPrice * 1.002);
     
     // Create points for SVG polyline
-    const points = hourlyPriceData.map((price, index) => {
-      const x = (index / (hourlyPriceData.length - 1)) * chartWidth;
+    const points = priceData.map((price, index) => {
+      const x = (index / (priceData.length - 1)) * chartWidth;
       // Invert Y coordinate for SVG (0 is top)
       const y = chartHeight - ((price - minPrice) / priceRange) * chartHeight;
       return `${x},${y}`;
     }).join(' ');
     
-    // Determine line color based on price trend
-    const isPositiveTrend = hourlyPriceData[hourlyPriceData.length - 1] >= hourlyPriceData[0];
+    // Determine line color based on trend direction (first to last point)
+    const isPositiveTrend = priceData[priceData.length - 1] >= priceData[0];
     const lineColor = isPositiveTrend ? '#10B981' : '#EF4444';
     const fillColor = isPositiveTrend ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
     
@@ -508,16 +771,18 @@ const Finance = () => {
     
     // Calculate position for the end point
     const endX = chartWidth;
-    const endY = chartHeight - ((hourlyPriceData[hourlyPriceData.length - 1] - minPrice) / priceRange) * chartHeight;
+    const endY = chartHeight - ((priceData[priceData.length - 1] - minPrice) / priceRange) * chartHeight;
     
-    // Generate minute labels for the x-axis
-    const isRealWorldData = company.realWorldPriceHistory && company.realWorldPriceHistory.length > 0;
+    // Generate time labels based on actual data points
     let timeLabels = [];
     
-    // Generate minute markers for the last hour
+    // Generate time labels for points in the chart
     const numLabels = 6; // Show 6 time points
     for (let i = 0; i < numLabels; i++) {
-      const minutesAgo = Math.floor((numLabels - 1 - i) * (60 / (numLabels - 1)));
+      const dataIndex = Math.floor(i * (priceData.length - 1) / (numLabels - 1));
+      const minutesAgo = Math.floor((priceData.length - 1 - dataIndex) * 0.5); // Each point is 30 seconds
+      
+      // Current market time
       const currentMinute = stockMarket.marketMinute;
       const currentHour = stockMarket.marketHour;
       
@@ -525,8 +790,9 @@ const Finance = () => {
       let labelMinute = (currentMinute - minutesAgo + 60) % 60;
       let labelHour = currentHour;
       
-      if (currentMinute < minutesAgo) {
-        labelHour = (currentHour - 1 + 24) % 24; // Go back an hour
+      if (minutesAgo > currentMinute) {
+        labelHour = (currentHour - Math.ceil(minutesAgo / 60) + 24) % 24;
+        labelMinute = (labelMinute + 60) % 60;
       }
       
       // Format the time label
@@ -537,7 +803,7 @@ const Finance = () => {
     return (
       <div className="bg-white p-4 rounded-lg">
         <h3 className="text-lg font-semibold mb-2">
-          Last Hour Price Movement
+          Price History
         </h3>
         <div className="relative chart-container">
           <svg 
@@ -659,7 +925,7 @@ const Finance = () => {
               data-color={lineColor}
               data-min-price={minPrice}
               data-price-range={priceRange}
-              data-price-data={JSON.stringify(hourlyPriceData)}
+              data-price-data={JSON.stringify(priceData)}
             />
           </svg>
           
@@ -676,8 +942,8 @@ const Finance = () => {
         {/* Price stats - updated to be more responsive */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mt-4 text-sm">
           <div className="bg-gray-50 p-2 rounded">
-            <span className="block text-gray-500">Open</span>
-            <span className="font-medium">${hourlyPriceData[0].toFixed(2)}</span>
+            <span className="block text-gray-500">First Point</span>
+            <span className="font-medium">${priceData[0].toFixed(2)}</span>
           </div>
           <div className="bg-gray-50 p-2 rounded">
             <span className="block text-gray-500">Current</span>
@@ -775,6 +1041,52 @@ const Finance = () => {
       ? Math.floor(money / company.currentPrice)
       : company.owned;
     
+    // Calculate time since last refresh for display
+    const secondsSinceRefresh = Math.floor((Date.now() - lastModalRefresh) / 1000);
+    const timeUntilNextRefresh = Math.max(0, 30 - secondsSinceRefresh);
+    
+    // Function to handle manual refresh
+    const handleManualRefresh = () => {
+      // Set refreshing state
+      setIsRefreshing(true);
+      
+      // Find the latest data for the selected stock
+      const updatedStock = stockMarket.companies.find(c => c.id === selectedStock.id);
+      
+      if (updatedStock) {
+        // Update the selected stock with fresh data
+        setSelectedStock(updatedStock);
+        
+        // Only add new price point to existing chart data
+        if (modalChartData && modalChartData.length > 0) {
+          const lastPrice = modalChartData[modalChartData.length - 1];
+          if (updatedStock.currentPrice !== lastPrice) {
+            const updatedChartData = [...modalChartData, updatedStock.currentPrice];
+            // Keep only the last 60 points
+            if (updatedChartData.length > 60) {
+              setModalChartData(updatedChartData.slice(-60));
+            } else {
+              setModalChartData(updatedChartData);
+            }
+          }
+        } else {
+          // Initialize chart data if it doesn't exist
+          setModalChartData([updatedStock.currentPrice]);
+        }
+        
+        // Update refresh count for UI feedback
+        setModalRefreshCount(prev => prev + 1);
+        setLastModalRefresh(Date.now());
+        
+        // Show refresh animation
+        setShowRefreshAnimation(true);
+        setTimeout(() => setShowRefreshAnimation(false), 800);
+      }
+      
+      // Reset refreshing state
+      setTimeout(() => setIsRefreshing(false), 500);
+    };
+    
     return (
       <div className="modal-overlay">
         <div 
@@ -782,7 +1094,7 @@ const Finance = () => {
           className="modal-content max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         >
           {/* Stock info header */}
-          <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
+          <div className={`bg-gray-800 text-white p-4 flex items-center justify-between ${showRefreshAnimation ? 'data-refreshed' : ''}`}>
             <div className="flex items-center">
               <span className="text-2xl mr-3">{company.logo}</span>
               <div>
@@ -795,144 +1107,199 @@ const Finance = () => {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold">${company.currentPrice.toFixed(2)}</div>
+              <div className="flex items-center justify-end gap-2">
+                <div className="text-2xl font-bold">${company.currentPrice.toFixed(2)}</div>
+                <button 
+                  onClick={handleManualRefresh}
+                  className={`refresh-button p-1 rounded-full hover:bg-gray-700 transition-colors ${isRefreshing ? 'refreshing opacity-100' : ''}`}
+                  title="Update current stock price"
+                  disabled={isRefreshing}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
               <div className={`text-sm ${company.percentChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {company.percentChange >= 0 ? '+' : ''}{company.percentChange.toFixed(2)}%
+              </div>
+              <div className="text-xs text-gray-400 mt-1 flex items-center justify-end">
+                <span>Price update in {timeUntilNextRefresh}s</span>
+                {modalRefreshCount > 0 && (
+                  <span className="ml-2 text-gray-500">
+                    ({modalRefreshCount} price update{modalRefreshCount !== 1 ? 's' : ''})
+                  </span>
+                )}
               </div>
             </div>
           </div>
           
           {/* Detailed price chart */}
-          <div className="p-4 border-b border-gray-200">
+          <div className={`p-4 border-b border-gray-200 ${showRefreshAnimation ? 'data-refreshed' : ''}`}>
             {renderDetailedPriceChart(company)}
           </div>
           
-          {/* Trading controls */}
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex">
+          {/* Mode toggle buttons */}
+          <div className="px-4 pt-4 pb-2 flex justify-center">
+            <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button
+                type="button"
+                onClick={() => setShowBettingUI(false)}
+                className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
+                  !showBettingUI
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Trade
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBettingUI(true)}
+                className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
+                  showBettingUI
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Price Betting
+              </button>
+            </div>
+          </div>
+          
+          {/* Trading or betting UI */}
+          {showBettingUI ? (
+            <div className="p-4">
+              {renderPriceDirectionUI()}
+            </div>
+          ) : (
+            /* Trading controls */
+            <div className={`p-4 ${showRefreshAnimation ? 'data-refreshed' : ''}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex">
+                  <button 
+                    className={`px-4 py-2 rounded-l-lg ${tradeType === 'buy' 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-700'}`}
+                    onClick={() => setTradeType('buy')}
+                  >
+                    Buy
+                  </button>
+                  <button 
+                    className={`px-4 py-2 rounded-r-lg ${tradeType === 'sell' 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-gray-200 text-gray-700'}`}
+                    onClick={() => setTradeType('sell')}
+                    disabled={company.owned <= 0}
+                  >
+                    Sell
+                  </button>
+                </div>
+                
+                <div className="text-sm text-gray-500">
+                  {tradeType === 'buy' 
+                    ? `Max: ${maxShares} shares`
+                    : `Owned: ${company.owned} shares`}
+                </div>
+              </div>
+              
+              {/* Quantity input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                <div className="quantity-input">
+                  <button 
+                    className="quantity-button"
+                    onClick={() => setTradeQuantity(Math.max(1, tradeQuantity - 1))}
+                  >
+                    −
+                  </button>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max={maxShares}
+                    value={tradeQuantity}
+                    onChange={(e) => setTradeQuantity(Math.min(maxShares, Math.max(1, parseInt(e.target.value) || 1)))}
+                    className="flex-1 min-w-0 block w-full px-3 py-2 border border-gray-300 text-center"
+                  />
+                  <button 
+                    className="quantity-button"
+                    onClick={() => setTradeQuantity(Math.min(maxShares, tradeQuantity + 1))}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              
+              {/* Trade details */}
+              <div className={`bg-gray-50 p-3 rounded-md mb-4 ${showRefreshAnimation ? 'data-refreshed' : ''}`}>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-600">Share Price:</span>
+                  <span className="font-medium">${company.currentPrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-600">Quantity:</span>
+                  <span className="font-medium">{tradeQuantity}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-gray-200">
+                  <span className="text-gray-700 font-medium">Total Value:</span>
+                  <span className="font-bold">${tradeValue.toFixed(2)}</span>
+                </div>
+              </div>
+              
+              {/* Execute button */}
+              <div className="flex space-x-3">
                 <button 
-                  className={`px-4 py-2 rounded-l-lg ${tradeType === 'buy' 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'}`}
-                  onClick={() => setTradeType('buy')}
+                  className="flex-1 py-2 px-4 rounded-md font-medium bg-gray-300 hover:bg-gray-400 text-gray-800 cancel-button"
+                  onClick={() => setShowTradeModal(false)}
                 >
-                  Buy
+                  Cancel
                 </button>
                 <button 
-                  className={`px-4 py-2 rounded-r-lg ${tradeType === 'sell' 
-                    ? 'bg-red-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'}`}
-                  onClick={() => setTradeType('sell')}
-                  disabled={company.owned <= 0}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium ${
+                    tradeType === 'buy' 
+                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                  onClick={executeTrade}
+                  disabled={(tradeType === 'buy' && tradeValue > money) || 
+                          (tradeType === 'sell' && company.owned < tradeQuantity)}
                 >
-                  Sell
+                  {tradeType === 'buy' ? 'Buy' : 'Sell'} {tradeQuantity} Shares
                 </button>
               </div>
               
-              <div className="text-sm text-gray-500">
-                {tradeType === 'buy' 
-                  ? `Max: ${maxShares} shares`
-                  : `Owned: ${company.owned} shares`}
-              </div>
-            </div>
-            
-            {/* Quantity input */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <div className="quantity-input">
-                <button 
-                  className="quantity-button"
-                  onClick={() => setTradeQuantity(Math.max(1, tradeQuantity - 1))}
-                >
-                  −
-                </button>
-                <input 
-                  type="number" 
-                  min="1" 
-                  max={maxShares}
-                  value={tradeQuantity}
-                  onChange={(e) => setTradeQuantity(Math.min(maxShares, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="flex-1 min-w-0 block w-full px-3 py-2 border border-gray-300 text-center"
-                />
-                <button 
-                  className="quantity-button"
-                  onClick={() => setTradeQuantity(Math.min(maxShares, tradeQuantity + 1))}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            
-            {/* Trade details */}
-            <div className="bg-gray-50 p-3 rounded-md mb-4">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Share Price:</span>
-                <span className="font-medium">${company.currentPrice.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Quantity:</span>
-                <span className="font-medium">{tradeQuantity}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span className="text-gray-700 font-medium">Total Value:</span>
-                <span className="font-bold">${tradeValue.toFixed(2)}</span>
-              </div>
-            </div>
-            
-            {/* Execute button */}
-            <div className="flex space-x-3">
-              <button 
-                className="flex-1 py-2 px-4 rounded-md font-medium bg-gray-300 hover:bg-gray-400 text-gray-800 cancel-button"
-                onClick={() => setShowTradeModal(false)}
-              >
-                Cancel
-              </button>
-              <button 
-                className={`flex-1 py-2 px-4 rounded-md font-medium ${
-                  tradeType === 'buy' 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                }`}
-                onClick={executeTrade}
-                disabled={(tradeType === 'buy' && tradeValue > money) || 
-                        (tradeType === 'sell' && company.owned < tradeQuantity)}
-              >
-                {tradeType === 'buy' ? 'Buy' : 'Sell'} {tradeQuantity} Shares
-              </button>
-            </div>
-            
-            {/* Additional info */}
-            {tradeType === 'buy' && (
-              <div className="mt-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Available Cash:</span>
-                  <span className="font-medium">${money.toLocaleString()}</span>
+              {/* Additional info */}
+              {tradeType === 'buy' && (
+                <div className={`mt-4 text-sm ${showRefreshAnimation ? 'data-refreshed' : ''}`}>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Available Cash:</span>
+                    <span className="font-medium">${money.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Remaining After Purchase:</span>
+                    <span className={`font-medium ${money - tradeValue < 0 ? 'text-red-600' : ''}`}>
+                      ${(money - tradeValue).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Remaining After Purchase:</span>
-                  <span className={`font-medium ${money - tradeValue < 0 ? 'text-red-600' : ''}`}>
-                    ${(money - tradeValue).toLocaleString()}
-                  </span>
+              )}
+              
+              {tradeType === 'sell' && company.owned > 0 && (
+                <div className={`mt-4 text-sm ${showRefreshAnimation ? 'data-refreshed' : ''}`}>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Current Position:</span>
+                    <span className="font-medium">{company.owned} shares (${(company.owned * company.currentPrice).toLocaleString()})</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Remaining After Sale:</span>
+                    <span className="font-medium">
+                      {company.owned - tradeQuantity} shares (${((company.owned - tradeQuantity) * company.currentPrice).toLocaleString()})
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            {tradeType === 'sell' && company.owned > 0 && (
-              <div className="mt-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Current Position:</span>
-                  <span className="font-medium">{company.owned} shares (${(company.owned * company.currentPrice).toLocaleString()})</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Remaining After Sale:</span>
-                  <span className="font-medium">
-                    {company.owned - tradeQuantity} shares (${((company.owned - tradeQuantity) * company.currentPrice).toLocaleString()})
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1107,7 +1474,396 @@ const Finance = () => {
     };
   }, [showTradeModal, getFilteredAndSortedCompanies().length, stockMarket.marketHour, stockMarket.marketMinute]);
   
-  // Main component render
+  // Add an effect to track price movement history when price changes are recorded
+  useEffect(() => {
+    if (stockMarket.companies) {
+      // Create a mapping of company price movements for display
+      const newPriceHistory = {};
+      
+      stockMarket.companies.forEach(company => {
+        if (!priceMovementHistory[company.id]) {
+          // Initialize with an array, not an object with history
+          newPriceHistory[company.id] = [];
+        } else {
+          // Make sure we're using the array correctly
+          newPriceHistory[company.id] = Array.isArray(priceMovementHistory[company.id]) ? 
+            [...priceMovementHistory[company.id]] : [];
+        }
+        
+        // Only add new entry if price direction has been recorded
+        if (company.priceDirection && company.priceChangeTime) {
+          const existingEntry = newPriceHistory[company.id].find(
+            entry => entry.timestamp === company.priceChangeTime
+          );
+          
+          if (!existingEntry) {
+            newPriceHistory[company.id].push({
+              price: company.lastRecordedPrice,
+              direction: company.priceDirection,
+              timestamp: company.priceChangeTime
+            });
+            
+            // Keep only the last 10 entries
+            if (newPriceHistory[company.id].length > 10) {
+              newPriceHistory[company.id] = newPriceHistory[company.id].slice(-10);
+            }
+          }
+        }
+      });
+      
+      setPriceMovementHistory(newPriceHistory);
+      
+      // Also update active bets
+      const activeBetsList = [];
+      stockMarket.companies.forEach(company => {
+        if (company.betHistory && company.betHistory.length > 0) {
+          company.betHistory
+            .filter(bet => !bet.resolved)
+            .forEach(bet => {
+              activeBetsList.push({
+                ...bet,
+                companyId: company.id,
+                companyName: company.name
+              });
+            });
+        }
+      });
+      
+      setActiveBets(activeBetsList);
+    }
+  }, [stockMarket.companies, stockMarket.lastPriceRecordTime]);
+
+  // Add handler for placing price direction bets
+  const handlePlaceBet = (direction) => {
+    if (!selectedStock) return;
+    
+    const result = stockMarket.placePriceDirectionBet(
+      selectedStock.id,
+      direction,
+      betAmount
+    );
+    
+    if (result.success) {
+      setNotification({
+        type: 'success',
+        message: result.message
+      });
+    } else {
+      setNotification({
+        type: 'error',
+        message: result.message
+      });
+    }
+  };
+
+  // Add a section to render recent price movements
+  const renderRecentPriceMovements = () => {
+    if (!selectedStock) return null;
+
+    const movements = priceMovementHistory[selectedStock.id] || [];
+    
+    return (
+      <div className="mb-4">
+        <h5 className="text-sm font-medium text-gray-700 mb-2">Recent Price Movements</h5>
+        <div className="flex flex-wrap gap-2">
+          {movements.length > 0 ? (
+            movements.slice().reverse().map((movement, idx) => (
+              <div 
+                key={`${movement.timestamp}-${idx}`}
+                className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                  movement.direction === 'up' 
+                    ? 'bg-green-100 text-green-800' 
+                    : movement.direction === 'down' 
+                      ? 'bg-red-100 text-red-800' 
+                      : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {movement.direction === 'up' ? '↑' : movement.direction === 'down' ? '↓' : '→'}
+                ${movement.price.toFixed(2)}
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-400 italic">No recent price movements</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Add price direction betting UI function
+  const renderPriceDirectionUI = () => {
+    if (!selectedStock) return null;
+    
+    const activeBet = activeBets.find(bet => bet.stockId === selectedStock.id);
+    const canBet = !activeBet && betAmount > 0 && money >= betAmount;
+    
+    return (
+      <div className="mb-4 p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+        <h4 className="font-medium text-indigo-800 mb-2">Price Direction Betting</h4>
+        
+        {/* Show recent price movements */}
+        {renderRecentPriceMovements()}
+        
+        {!activeBet ? (
+          <>
+            <p className="text-sm text-gray-600 mb-3">
+              Predict whether the price will go up or down in the next 30 seconds.
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bet Amount
+              </label>
+              <div className="flex">
+                <button
+                  className="px-3 py-2 bg-gray-200 rounded-l-md"
+                  onClick={() => setBetAmount(Math.max(100, betAmount - 100))}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="100"
+                  step="100"
+                  value={betAmount}
+                  onChange={(e) => setBetAmount(Math.max(100, parseInt(e.target.value) || 0))}
+                  className="block w-full px-3 py-2 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-center"
+                />
+                <button
+                  className="px-3 py-2 bg-gray-200 rounded-r-md"
+                  onClick={() => setBetAmount(betAmount + 100)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                className="py-2 font-medium rounded-md bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                disabled={!canBet}
+                onClick={() => {
+                  if (canBet) {
+                    stockMarket.dispatch({
+                      type: 'PLACE_PRICE_DIRECTION_BET',
+                      payload: {
+                        stockId: selectedStock.id,
+                        amount: betAmount,
+                        direction: 'up'
+                      }
+                    });
+                    
+                    // Add the bet to active bets
+                    setActiveBets([...activeBets, {
+                      stockId: selectedStock.id,
+                      amount: betAmount,
+                      direction: 'up',
+                      startPrice: selectedStock.currentPrice,
+                      timestamp: Date.now(),
+                      countdown: 30,
+                      processed: false
+                    }]);
+                    
+                    // Deduct money
+                    updateMoney(-betAmount);
+                  }
+                }}
+              >
+                Bet Price Up
+              </button>
+              
+              <button
+                className="py-2 font-medium rounded-md bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                disabled={!canBet}
+                onClick={() => {
+                  if (canBet) {
+                    stockMarket.dispatch({
+                      type: 'PLACE_PRICE_DIRECTION_BET',
+                      payload: {
+                        stockId: selectedStock.id,
+                        amount: betAmount,
+                        direction: 'down'
+                      }
+                    });
+                    
+                    // Add the bet to active bets
+                    setActiveBets([...activeBets, {
+                      stockId: selectedStock.id,
+                      amount: betAmount,
+                      direction: 'down',
+                      startPrice: selectedStock.currentPrice,
+                      timestamp: Date.now(),
+                      countdown: 30,
+                      processed: false
+                    }]);
+                    
+                    // Deduct money
+                    updateMoney(-betAmount);
+                  }
+                }}
+              >
+                Bet Price Down
+              </button>
+            </div>
+            
+            {money < betAmount && (
+              <p className="text-sm text-red-600 mt-2">
+                Insufficient funds for this bet amount.
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="bg-white p-3 rounded-md border border-indigo-200">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium">Active Bet</span>
+              <span className={`text-sm font-medium px-2 py-1 rounded ${
+                activeBet.direction === 'up' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {activeBet.direction === 'up' ? 'Price Up' : 'Price Down'}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+              <div>
+                <p className="text-gray-500">Amount</p>
+                <p className="font-semibold">${activeBet.amount}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Potential Win</p>
+                <p className="font-semibold">${(activeBet.amount * 1.8).toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Start Price</p>
+                <p className="font-semibold">${activeBet.startPrice.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Current Price</p>
+                <p className={`font-semibold ${
+                  selectedStock.currentPrice > activeBet.startPrice ? 'text-green-600' : 
+                  selectedStock.currentPrice < activeBet.startPrice ? 'text-red-600' : 'text-gray-800'
+                }`}>
+                  ${selectedStock.currentPrice.toFixed(2)}
+                </p>
+              </div>
+            </div>
+            
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+              <div className="h-3 rounded-full bg-indigo-500" style={{
+                width: `${Math.min(100, (activeBet.countdown / 30) * 100)}%`
+              }}></div>
+            </div>
+            <p className="text-xs text-center text-gray-500">
+              {activeBet.countdown > 0 ? `Result in ${activeBet.countdown} seconds` : 'Processing result...'}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Add an effect to track price movements and update active bets
+  useEffect(() => {
+    // Only proceed if we have companies data
+    if (!stockMarket.companies) return;
+    
+    // Track price movements for all companies
+    const newPriceMovements = { ...priceMovementHistory };
+    
+    stockMarket.companies.forEach(company => {
+      // Switch to a consistent array-based structure for each company's price movements
+      if (!newPriceMovements[company.id]) {
+        newPriceMovements[company.id] = [];
+      }
+      
+      // Check if the price has changed
+      const lastPrice = newPriceMovements[company.id].length > 0 ? 
+        newPriceMovements[company.id][newPriceMovements[company.id].length - 1].price : 
+        company.currentPrice;
+      
+      // Only record movements if price is different
+      if (company.currentPrice !== lastPrice) {
+        const direction = company.currentPrice > lastPrice ? 'up' : 'down';
+        
+        // Add the new price movement
+        newPriceMovements[company.id].push({
+          timestamp: Date.now(),
+          price: company.currentPrice,
+          direction
+        });
+        
+        // Keep history limited to last 10 movements
+        if (newPriceMovements[company.id].length > 10) {
+          newPriceMovements[company.id].shift();
+        }
+      }
+    });
+    
+    setPriceMovementHistory(newPriceMovements);
+    
+    // Update active bets
+    if (activeBets.length > 0) {
+      const updatedBets = activeBets.map(bet => {
+        // Reduce countdown timer
+        const countdown = Math.max(0, bet.countdown - 1);
+        
+        // Check if bet is complete
+        if (countdown === 0 && !bet.processed) {
+          const company = stockMarket.companies.find(c => c.id === bet.stockId);
+          if (company) {
+            // Determine if bet won
+            const priceChange = company.currentPrice - bet.startPrice;
+            const betWon = (bet.direction === 'up' && priceChange > 0) || 
+                          (bet.direction === 'down' && priceChange < 0);
+            
+            // Process the bet result
+            if (betWon) {
+              // 80% profit on win
+              const winAmount = bet.amount * 1.8;
+              updateMoney(winAmount);
+              
+              setNotification({
+                type: 'success',
+                message: `You won $${winAmount.toFixed(2)} on your ${bet.stockId} price direction bet!`
+              });
+            } else {
+              setNotification({
+                type: 'error',
+                message: `You lost $${bet.amount.toFixed(2)} on your ${bet.stockId} price direction bet.`
+              });
+            }
+            
+            return {
+              ...bet,
+              processed: true,
+              won: betWon,
+              finalPrice: company.currentPrice,
+              countdown
+            };
+          }
+        }
+        
+        return {
+          ...bet,
+          countdown
+        };
+      });
+      
+      // Filter out processed bets
+      const remainingBets = updatedBets.filter(bet => bet.countdown > 0 || !bet.processed);
+      setActiveBets(remainingBets);
+    }
+    
+    // Set interval to one second
+    const timer = setTimeout(() => {
+      // Force a re-render to update bet countdown
+      if (activeBets.length > 0) {
+        setActiveBets([...activeBets]);
+      }
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [stockMarket.companies, priceMovementHistory, activeBets, updateMoney]);
+
   return (
     <div className="bg-gray-50 min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
@@ -1125,6 +1881,9 @@ const Finance = () => {
         
         {/* Stock ticker */}
         {renderStockTicker()}
+        
+        {/* NOW Average */}
+        {renderNOWAverage()}
         
         {/* Stock Market Table Section */}
         <div className="mb-8">
