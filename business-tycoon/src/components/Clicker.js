@@ -4,7 +4,7 @@ import '../styles/Clicker.css';
 import Regeneration from './Regeneration';
 
 const Clicker = () => {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, jobExperienceNeededForLevel } = useGame();
   const [income, setIncome] = useState(0);
   const [clickValue, setClickValue] = useState(0.01);
   const [showAscension, setShowAscension] = useState(false);
@@ -12,6 +12,8 @@ const Clicker = () => {
   const [activeTooltip, setActiveTooltip] = useState(null);
   const intervalRef = useRef(null);
   const boostsContainerRef = useRef(null);
+  const [skillGainIndicator, setSkillGainIndicator] = useState(null);
+  const [showPromotionNotification, setShowPromotionNotification] = useState(false);
   
   // Get the click speed multiplier based on transportation
   const getClicksPerSecond = useCallback(() => {
@@ -46,8 +48,8 @@ const Clicker = () => {
     
     // Job income is only for clicking, not passive
     if (state.playerStatus.job) {
-      // Use hourlyPay property, falling back to payPerClick if needed
-      const hourlyRate = state.playerStatus.job.hourlyPay || state.playerStatus.job.payPerClick;
+      // Always use hourlyPay divided by 60 to get per-click value
+      const hourlyRate = state.playerStatus.job.hourlyPay || (state.playerStatus.job.payPerClick * 60);
       // Calculate click value as 1 minute of work (hourly rate / 60)
       newClickValue = hourlyRate / 60;
     }
@@ -57,7 +59,7 @@ const Clicker = () => {
       totalIncome += state.assets.reduce((sum, asset) => sum + asset.income, 0);
     }
     
-    // Business income
+    // Business incomesss
     if (state.playerStatus.business) {
       totalIncome += state.playerStatus.business.income;
     }
@@ -129,6 +131,11 @@ const Clicker = () => {
     // Always do a single click immediately on mouse down
     dispatch({ type: 'CLICK' });
     
+    // Show skill gain if there's a job
+    if (state.playerStatus.job && state.playerStatus.job.category) {
+      showSkillGain(e.clientX, e.clientY - 20);
+    }
+    
     if (canAutoClick()) {
       setIsHolding(true);
     }
@@ -193,6 +200,7 @@ const Clicker = () => {
   };
   
   // Format minutes to hours and minutes
+  // eslint-disable-next-line no-unused-vars
   const formatWorkTime = (minutes) => {
     if (minutes < 60) {
       return `${minutes} min`;
@@ -243,6 +251,95 @@ const Clicker = () => {
     return count;
   };
   
+  // Add function to show skill gain indicator (add after getBusinesses())
+  const showSkillGain = (x, y) => {
+    if (!state.playerStatus.job || !state.playerStatus.job.category) return;
+    
+    // Get the job category to display which skill is gaining
+    const jobCategory = state.playerStatus.job.category;
+    
+    // Add this skill indicator
+    setSkillGainIndicator({
+      skill: jobCategory.charAt(0).toUpperCase() + jobCategory.slice(1),
+      x,
+      y
+    });
+    
+    // Clear after animation
+    setTimeout(() => {
+      setSkillGainIndicator(null);
+    }, 600);
+  };
+  
+  // Add an effect to check for promotion readiness
+  useEffect(() => {
+    if (state.playerStatus.job?.readyForPromotion && !showPromotionNotification) {
+      setShowPromotionNotification(true);
+      
+      // Hide after 5 seconds
+      const timer = setTimeout(() => {
+        setShowPromotionNotification(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    } else if (!state.playerStatus.job?.readyForPromotion && showPromotionNotification) {
+      // Make sure notification is hidden when not ready for promotion
+      setShowPromotionNotification(false);
+    }
+  }, [state.playerStatus.job?.readyForPromotion, showPromotionNotification]);
+  
+  // Add a dismiss function
+  const dismissPromotionNotification = () => {
+    setShowPromotionNotification(false);
+  };
+  
+  // Get default job icon if not provided in job data
+  const getJobIcon = (jobLevel, category) => {
+    // Default icons based on job level and category
+    const levelIcons = {
+      owner: '👑',
+      executive: '🌟',
+      senior: '📊',
+      mid: '📋',
+      entry: '🔰'
+    };
+    
+    // Category-specific icons
+    const categoryIcons = {
+      technology: '💻',
+      technical: '🖥️',
+      finance: '💰',
+      financial: '💹',
+      healthcare: '🏥',
+      education: '🎓',
+      retail: '🛒',
+      hospitality: '🏨',
+      service: '🛎️',
+      sales: '🏷️',
+      legal: '⚖️',
+      construction: '🔨',
+      creative: '🎨',
+      marketing: '📢',
+      entertainment: '🎬',
+      science: '🔬',
+      management: '📋',
+      food: '🍳'
+    };
+    
+    // Check if category exists and has a matching icon
+    if (category && categoryIcons[category]) {
+      return categoryIcons[category];
+    }
+    
+    // Fallback to job level icon
+    return levelIcons[jobLevel] || '🔰';
+  };
+  
+  // Function to determine job category
+  const getJobCategory = (job) => {
+    return job ? job.category : null;
+  };
+  
   return (
     <div className="clicker-container">
       {/* Top section with player info */}
@@ -250,7 +347,7 @@ const Clicker = () => {
         <div className="player-name-level">
           <h2>{state.playerStatus.name || "Player"}</h2>
           <div className="player-level">
-            <span>Level {state.level}</span>
+            <span className="level-badge level-beginner">Level {state.level}</span>
             <div className="xp-bar">
               <div className="xp-progress" style={{ width: `${progressPercentage}%` }}></div>
             </div>
@@ -260,17 +357,55 @@ const Clicker = () => {
         <div className="job-info-panel">
           {state.playerStatus.job ? (
             <>
-              <div className="job-title-wrapper">
-                <h3>{state.playerStatus.job.title}</h3>
-                <span className="job-level">{state.playerStatus.job.level}</span>
+              <div className="job-header">
+                <div className="job-title-container">
+                  <div className="job-title">
+                    {state.playerStatus.job.title}
+                    {state.playerStatus.job.readyForPromotion && (
+                      <span className="badge badge-primary badge-promotion">Ready for Promotion!</span>
+                    )}
+                  </div>
+                  <div className="job-pay">
+                    ${(state.playerStatus.job.hourlyPay || state.playerStatus.job.payPerClick * 60).toFixed(2)}/hr | ${clickValue.toFixed(2)}/click
+                  </div>
+                </div>
+                <div className="job-icon">
+                  {state.playerStatus.job.image || getJobIcon(getJobCategory(state.playerStatus.job), state.playerStatus.job.category)}
+                </div>
               </div>
-              <div className="job-pay">
-                <div className="hourly-rate">${(state.playerStatus.job.hourlyPay || state.playerStatus.job.payPerClick).toFixed(2)}/hr</div>
-                <div className="minute-rate">${clickValue.toFixed(2)}<span>/min</span></div>
+              
+              {/* Job Level Progress Bar */}
+              <div className="job-level-progress">
+                <div className="level-display">
+                  <span className="level-badge level-beginner">Level {state.playerStatus.job.level}</span>
+                  {state.playerStatus.job.level < 500 && (
+                    <span className="next-job-level">
+                      {state.playerStatus.job.readyForPromotion 
+                        ? <span className="badge badge-primary badge-promotion">Ready for Promotion!</span> 
+                        : `Level ${state.playerStatus.job.level + 1}`}
+                    </span>
+                  )}
+                </div>
+                <div className="level-progress-bar">
+                  <div 
+                    className={`level-progress-filled ${state.playerStatus.job.readyForPromotion ? 'promotion-ready' : ''}`}
+                    style={{ 
+                      width: `${Math.min(100, (state.playerStatus.jobExperience / jobExperienceNeededForLevel(state.playerStatus.job.level)) * 100)}%` 
+                    }}
+                  ></div>
+                </div>
+                <div className="level-experience-text">
+                  {state.playerStatus.job.readyForPromotion 
+                    ? <span className="promotion-ready-text">Check Jobs tab to apply for promotion!</span> 
+                    : <span>XP: {Math.round(state.playerStatus.jobExperience)} / {jobExperienceNeededForLevel(state.playerStatus.job.level)}</span>}
+                  {!state.playerStatus.job.readyForPromotion && state.playerStatus.job.level < 500 && (
+                    <span>Next promotion at level {Math.ceil(state.playerStatus.job.level / 10) * 10}</span>
+                  )}
+                </div>
               </div>
             </>
           ) : (
-            <div className="no-job-message">No current job</div>
+            <div className="no-job">No job yet! Visit the Jobs tab to apply.</div>
           )}
         </div>
         
@@ -305,7 +440,7 @@ const Clicker = () => {
             >
               <div className="boost-icon transportation-boost">
                 <span>{state.playerStatus.transportation.image}</span>
-                <span className="boost-value">{getClicksPerSecond()}x</span>
+                <span className="boost-text">{getClicksPerSecond()}x</span>
               </div>
               <div className="boost-tooltip">
                 <h4>Transportation Boost</h4>
@@ -325,7 +460,7 @@ const Clicker = () => {
             >
               <div className="boost-icon level-boost">
                 <span>⭐</span>
-                <span className="boost-value">+{(state.level - 1)}%</span>
+                <span className="boost-text">+{(state.level - 1)}%</span>
               </div>
               <div className="boost-tooltip">
                 <h4>Level Bonus</h4>
@@ -345,7 +480,7 @@ const Clicker = () => {
             >
               <div className="boost-icon ascension-boost">
                 <span>🔄</span>
-                <span className="boost-value">+{state.playerStatus.ascensionBonus}%</span>
+                <span className="boost-text">+{state.playerStatus.ascensionBonus}%</span>
               </div>
               <div className="boost-tooltip">
                 <h4>Ascension Bonus</h4>
@@ -399,6 +534,29 @@ const Clicker = () => {
       )}
       
       {state.level >= MAX_LEVEL && <Regeneration />}
+      
+      {skillGainIndicator && (
+        <div 
+          className="skill-gain-indicator"
+          style={{ 
+            left: `${skillGainIndicator.x}px`, 
+            top: `${skillGainIndicator.y}px` 
+          }}
+        >
+          +{skillGainIndicator.skill}
+        </div>
+      )}
+      
+      {showPromotionNotification && (
+        <div className="promotion-notification" onClick={dismissPromotionNotification}>
+          <div className="promotion-notification-icon">🎉</div>
+          <div className="promotion-notification-content">
+            <h4>Ready for Promotion!</h4>
+            <p>You've reached level {state.playerStatus.job.level} and can apply for a promotion in the Jobs tab</p>
+          </div>
+          <button className="promotion-notification-dismiss">×</button>
+        </div>
+      )}
     </div>
   );
 };

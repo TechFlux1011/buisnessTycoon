@@ -1,10 +1,10 @@
 .business-container {
-  max-width: 1200px;
+  max-width: var(--container-width);
   margin: 0 auto;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: var(--space-md);
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .business-container h2 {
@@ -136,19 +136,23 @@
   background-color: #4CAF50;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 20px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
+  font-weight: 500;
 }
 
 .buy-button:hover:not(:disabled),
 .upgrade-button:hover:not(:disabled) {
   background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .buy-button:disabled,
 .upgrade-button:disabled {
   background-color: #cccccc;
+  color: #666666;
   cursor: not-allowed;
 }
 
@@ -171,39 +175,33 @@
 /* Filter Controls */
 .filter-controls {
   margin-bottom: 20px;
-  background-color: #f0f0f0;
+  background-color: var(--bg-tertiary);
   padding: 15px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
 }
 
 .filter-label {
   display: block;
-  margin-bottom: 10px;
-  font-weight: bold;
-  color: #333;
+  margin-bottom: var(--space-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
 }
 
 .filter-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--space-sm);
 }
 
 .filter-buttons button {
-  padding: 8px 12px;
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  background: none;
+  border: none;
+  padding: 2px;
   cursor: pointer;
   transition: all 0.2s;
+  border-radius: var(--radius-md);
 }
 
 .filter-buttons button:hover {
-  background-color: #f5f5f5;
-}
-
-.filter-buttons button.active {
-  background-color: #4CAF50;
-  color: white;
-  border-color: #4CAF50;
+  transform: translateY(-2px);
 } 

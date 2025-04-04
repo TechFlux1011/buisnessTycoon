@@ -11,6 +11,7 @@ const initialState = {
   level: 1,
   playerStatus: {
     job: null,
+    jobExperience: 0, // Job experience points
     housing: null,
     transportation: null,
     business: null,
@@ -22,6 +23,11 @@ const initialState = {
   milestones: [],
   currentEducation: null,
   educationProgress: 0,
+  workEvents: {
+    pendingEvent: null,
+    lastEventTime: null,
+    notificationVisible: false,
+  },
 };
 
 const calcIncome = (state) => {
@@ -46,9 +52,455 @@ const calcIncome = (state) => {
   return income;
 };
 
+// Experience needed for next job level
+const jobExperienceNeededForLevel = (level) => {
+  if (level <= 0) return 0;
+  
+  // Base experience needed for level 1
+  const baseExperience = 100;
+  
+  // Experience scales with level across different tiers
+  if (level <= 100) {
+    // Entry Level (1-100): Linear growth
+    return baseExperience * level;
+  } else if (level <= 200) {
+    // Tier 1 (101-200): Moderate growth
+    return baseExperience * level * 1.5;
+  } else if (level <= 400) {
+    // Tier 2 (201-400): Faster growth
+    return baseExperience * level * 2.0;
+  } else {
+    // Tier 3 (401+): Exponential growth
+    return baseExperience * level * 2.5;
+  }
+};
+
 const experienceNeededForLevel = (level) => {
   // Exponential growth formula
   return Math.floor(100 * Math.pow(1.5, level - 1));
+};
+
+// Get job title based on level and category
+const getJobTitleForLevel = (category, level) => {
+  // Define title progression by category
+  const titlesByCategory = {
+    food: [
+      "Cook I", "Cook II", "Cook III", 
+      "Chef de Partie", "Sous Chef", "Head Chef", 
+      "Executive Chef", "Master Chef", "Celebrity Chef", "Michelin Star Chef"
+    ],
+    retail: [
+      "Cashier I", "Cashier II", "Cashier III", 
+      "Shift Lead", "Department Lead", "Assistant Manager", 
+      "Store Manager", "District Manager", "Regional Director", "VP of Operations"
+    ],
+    technical: [
+      "Junior Developer", "Developer", "Senior Developer", 
+      "Lead Developer", "Architect", "Development Manager", 
+      "Director of Engineering", "VP of Engineering", "CTO", "Chief Innovation Officer"
+    ],
+    financial: [
+      "Accountant I", "Accountant II", "Accountant III", 
+      "Senior Accountant", "Financial Analyst", "Finance Manager", 
+      "Controller", "Finance Director", "CFO", "Chief Investment Officer"
+    ],
+    healthcare: [
+      "Nurse I", "Nurse II", "Nurse III", 
+      "Charge Nurse", "Nurse Practitioner", "Department Head", 
+      "Director of Nursing", "Chief Nursing Officer", "VP of Patient Care", "Chief Medical Officer"
+    ],
+    legal: [
+      "Paralegal I", "Paralegal II", "Paralegal III", 
+      "Junior Associate", "Associate", "Senior Associate", 
+      "Junior Partner", "Partner", "Senior Partner", "Managing Partner"
+    ],
+    management: [
+      // Entry level (1-100)
+      "Associate I", // Level 1
+      "Associate II", // Level 10
+      "Associate III", // Level 20
+      "Senior Associate I", // Level 30
+      "Senior Associate II", // Level 40
+      "Senior Associate III", // Level 50
+      "Team Lead I", // Level 60
+      "Team Lead II", // Level 70
+      "Team Lead III", // Level 80
+      "Assistant Supervisor", // Level 90
+      "Junior Supervisor", // Level 100
+      
+      // Tier 1: Supervisory/Mid-level (101-200)
+      "Supervisor", // Level 110
+      "Senior Supervisor", // Level 120
+      "Project Supervisor", // Level 130
+      "Assistant Manager", // Level 140
+      "Department Manager", // Level 150
+      "Senior Manager", // Level 160
+      "Division Manager", // Level 170
+      "General Manager", // Level 180
+      "Operations Manager", // Level 190
+      "Regional Manager", // Level 200
+      
+      // Tier 2: Upper Management (201-400)
+      "Director", // Level 210
+      "Senior Director", // Level 220
+      "Executive Director", // Level 230
+      "Regional Director", // Level 240
+      "Divisional Director", // Level 250
+      "Vice President", // Level 260
+      "Senior Vice President", // Level 270
+      "Executive Vice President", // Level 280
+      "Chief Operating Officer", // Level 290
+      "President", // Level 300
+      "Chief Executive Officer", // Level 310
+      "Managing Director", // Level 320
+      "Executive Chairman", // Level 330
+      "Chairman of the Board", // Level 340
+      "Group Chairman", // Level 350
+      "Global Chairman", // Level 360
+      "Chief Principal", // Level 370
+      "Principal Partner", // Level 380
+      "Executive Partner", // Level 390
+      "Managing Partner", // Level 400
+      
+      // Tier 3: Corporate Elite
+      "Entrepreneur", // Level 410
+      "Venture Capitalist", // Level 420
+      "Angel Investor", // Level 430
+      "Business Magnate", // Level 440
+      "Industry Titan", // Level 450
+      "Corporate Overlord", // Level 460
+      "Market Dominator", // Level 470
+      "Finance Mogul", // Level 480
+      "Business Emperor", // Level 490
+      "Tycoon" // Level 500
+    ]
+  };
+  
+  // Get titles for the requested category (default to general if not found)
+  const titles = titlesByCategory[category] || [
+    "Associate I", "Associate II", "Associate III", 
+    "Senior Associate", "Team Lead", "Supervisor", 
+    "Manager", "Senior Manager", "Director", "Executive"
+  ];
+  
+  // Calculate which title to use based on level (every 10 levels is a new title)
+  // For levels beyond the defined titles, use the highest title
+  let titleIndex = Math.min(Math.floor((level - 1) / 10), titles.length - 1);
+  
+  return titles[titleIndex];
+};
+
+// Calculate pay based on job level
+const calculatePayForLevel = (basePay, level) => {
+  // Each level increases pay by 5%
+  return basePay * (1 + (level - 1) * 0.05);
+};
+
+// Random work event generator
+const generateWorkEvent = (job) => {
+  if (!job) return null;
+  
+  const jobCategory = job.category || 'general';
+  const events = workEvents[jobCategory] || workEvents.general;
+  
+  // Randomly select an event
+  const randomEvent = events[Math.floor(Math.random() * events.length)];
+  
+  return {
+    id: `event_${Date.now()}`,
+    title: randomEvent.title,
+    description: randomEvent.description,
+    choices: randomEvent.choices,
+    timestamp: Date.now(),
+  };
+};
+
+// Check if it's time for a work event (random, but ~every 5-10 minutes)
+const shouldTriggerWorkEvent = (lastEventTime) => {
+  if (!lastEventTime) return Math.random() < 0.05; // 5% chance on first check
+  
+  const now = Date.now();
+  const timeSinceLastEvent = now - lastEventTime;
+  
+  // Minimum time between events: 5 minutes
+  if (timeSinceLastEvent < 5 * 60 * 1000) return false;
+  
+  // Random chance increases the longer it's been since last event
+  const baseChance = 0.01; // 1% chance per minute after minimum time
+  const minutesSinceMin = (timeSinceLastEvent - (5 * 60 * 1000)) / (60 * 1000);
+  const chance = Math.min(0.25, baseChance * minutesSinceMin); // Cap at 25%
+  
+  return Math.random() < chance;
+};
+
+// Work events by job category
+const workEvents = {
+  general: [
+    {
+      title: "Team Project",
+      description: "Your manager has assigned a challenging team project. How will you approach it?",
+      choices: [
+        { 
+          text: "Take the lead and organize everyone", 
+          outcome: { skill: "leadership", gain: 0.5, description: "You demonstrated strong leadership skills!" }
+        },
+        { 
+          text: "Focus on communication and teamwork", 
+          outcome: { skill: "communication", gain: 0.5, description: "Your communication skills have improved!" }
+        },
+        { 
+          text: "Work independently on your tasks", 
+          outcome: { skill: "technical", gain: 0.3, description: "You completed your tasks efficiently." }
+        }
+      ]
+    },
+    {
+      title: "Office Conflict",
+      description: "Two coworkers are arguing about a project approach. What do you do?",
+      choices: [
+        { 
+          text: "Mediate the conflict", 
+          outcome: { skill: "leadership", gain: 0.4, description: "You successfully resolved the conflict!" }
+        },
+        { 
+          text: "Suggest a compromise", 
+          outcome: { skill: "communication", gain: 0.4, description: "Your diplomatic approach was appreciated." }
+        },
+        { 
+          text: "Stay out of it", 
+          outcome: { skill: "ethics", gain: 0.2, description: "You focused on your own work." }
+        }
+      ]
+    }
+  ],
+  food: [
+    {
+      title: "Kitchen Emergency",
+      description: "The restaurant is packed and one of the chefs called in sick. What's your move?",
+      choices: [
+        { 
+          text: "Step up and cover multiple stations", 
+          outcome: { skill: "food", gain: 0.6, description: "You mastered multiple cooking stations!" }
+        },
+        { 
+          text: "Reorganize the kitchen workflow", 
+          outcome: { skill: "management", gain: 0.5, description: "Your management skills improved." }
+        },
+        { 
+          text: "Focus on quality over speed", 
+          outcome: { skill: "food", gain: 0.4, description: "Your attention to detail was noticed." }
+        }
+      ]
+    },
+    {
+      title: "Customer Complaint",
+      description: "A customer is unhappy with their meal. How do you handle it?",
+      choices: [
+        { 
+          text: "Personally apologize and remake it", 
+          outcome: { skill: "food", gain: 0.5, description: "You created a perfect dish!" }
+        },
+        { 
+          text: "Offer a complimentary dessert", 
+          outcome: { skill: "communication", gain: 0.4, description: "Your customer service skills improved." }
+        },
+        { 
+          text: "Ask the manager to handle it", 
+          outcome: { skill: "ethics", gain: 0.2, description: "You learned from watching the manager." }
+        }
+      ]
+    }
+  ],
+  retail: [
+    {
+      title: "Busy Sale Day",
+      description: "It's the biggest sale of the year and the store is understaffed. What do you do?",
+      choices: [
+        { 
+          text: "Work the register and direct customers", 
+          outcome: { skill: "communication", gain: 0.5, description: "You handled customer interactions expertly!" }
+        },
+        { 
+          text: "Help organize the stockroom", 
+          outcome: { skill: "management", gain: 0.4, description: "Your organizational skills improved." }
+        },
+        { 
+          text: "Focus on keeping displays neat", 
+          outcome: { skill: "retail", gain: 0.3, description: "You maintained store presentation perfectly." }
+        }
+      ]
+    },
+    {
+      title: "Inventory Discrepancy",
+      description: "You've discovered a significant inventory error. What's your approach?",
+      choices: [
+        { 
+          text: "Investigate and document the issue", 
+          outcome: { skill: "technical", gain: 0.4, description: "Your analytical skills improved!" }
+        },
+        { 
+          text: "Report it to your supervisor", 
+          outcome: { skill: "ethics", gain: 0.4, description: "Your integrity was noted." }
+        },
+        { 
+          text: "Develop a new tracking system", 
+          outcome: { skill: "retail", gain: 0.5, description: "You created an improved inventory process!" }
+        }
+      ]
+    }
+  ],
+  technical: [
+    {
+      title: "System Outage",
+      description: "The main system has crashed and everyone is looking to you for a solution. What do you do?",
+      choices: [
+        { 
+          text: "Analyze logs and debug methodically", 
+          outcome: { skill: "technical", gain: 0.6, description: "Your debugging skills leveled up!" }
+        },
+        { 
+          text: "Implement the emergency backup", 
+          outcome: { skill: "management", gain: 0.4, description: "Your quick thinking saved the day." }
+        },
+        { 
+          text: "Coordinate the response team", 
+          outcome: { skill: "leadership", gain: 0.5, description: "You led the team through the crisis." }
+        }
+      ]
+    },
+    {
+      title: "Project Deadline",
+      description: "Your team is behind on an important project deadline. How do you respond?",
+      choices: [
+        { 
+          text: "Work extra hours to finish", 
+          outcome: { skill: "technical", gain: 0.5, description: "Your coding endurance improved!" }
+        },
+        { 
+          text: "Optimize the most critical features", 
+          outcome: { skill: "technical", gain: 0.4, description: "You learned to prioritize effectively." }
+        },
+        { 
+          text: "Negotiate for a deadline extension", 
+          outcome: { skill: "communication", gain: 0.4, description: "Your negotiation skills improved." }
+        }
+      ]
+    }
+  ],
+  financial: [
+    {
+      title: "Audit Preparation",
+      description: "The annual audit is approaching and there are discrepancies in the accounts. What's your approach?",
+      choices: [
+        { 
+          text: "Review all transactions methodically", 
+          outcome: { skill: "financial", gain: 0.5, description: "Your attention to detail improved!" }
+        },
+        { 
+          text: "Develop a reconciliation strategy", 
+          outcome: { skill: "technical", gain: 0.4, description: "Your systematic approach was effective." }
+        },
+        { 
+          text: "Work with the team to fix issues", 
+          outcome: { skill: "leadership", gain: 0.4, description: "You guided the team successfully." }
+        }
+      ]
+    },
+    {
+      title: "Investment Opportunity",
+      description: "You've identified a potential investment opportunity for a client. What do you do?",
+      choices: [
+        { 
+          text: "Conduct thorough risk analysis", 
+          outcome: { skill: "financial", gain: 0.6, description: "Your analytical skills improved significantly!" }
+        },
+        { 
+          text: "Present a balanced recommendation", 
+          outcome: { skill: "communication", gain: 0.4, description: "Your presentation skills improved." }
+        },
+        { 
+          text: "Consult with senior advisors", 
+          outcome: { skill: "financial", gain: 0.3, description: "You learned from experienced colleagues." }
+        }
+      ]
+    }
+  ],
+  healthcare: [
+    {
+      title: "Patient Emergency",
+      description: "A patient's condition is deteriorating rapidly. What do you do?",
+      choices: [
+        { 
+          text: "Follow emergency protocols precisely", 
+          outcome: { skill: "healthcare", gain: 0.5, description: "Your clinical skills were impeccable!" }
+        },
+        { 
+          text: "Call for additional support", 
+          outcome: { skill: "management", gain: 0.4, description: "Your resource management was effective." }
+        },
+        { 
+          text: "Comfort the patient while treating", 
+          outcome: { skill: "communication", gain: 0.4, description: "Your bedside manner improved." }
+        }
+      ]
+    },
+    {
+      title: "Staff Shortage",
+      description: "Your unit is understaffed during a busy shift. How do you handle it?",
+      choices: [
+        { 
+          text: "Prioritize patients by acuity", 
+          outcome: { skill: "healthcare", gain: 0.5, description: "Your triage skills improved!" }
+        },
+        { 
+          text: "Coordinate with other departments", 
+          outcome: { skill: "leadership", gain: 0.4, description: "Your leadership in crisis improved." }
+        },
+        { 
+          text: "Focus on efficiency and workflow", 
+          outcome: { skill: "management", gain: 0.4, description: "Your efficiency skills developed." }
+        }
+      ]
+    }
+  ],
+  legal: [
+    {
+      title: "Challenging Case",
+      description: "You've been assigned a complex case with conflicting precedents. How do you approach it?",
+      choices: [
+        { 
+          text: "Research extensively", 
+          outcome: { skill: "legal", gain: 0.6, description: "Your legal research skills improved!" }
+        },
+        { 
+          text: "Consult with senior partners", 
+          outcome: { skill: "communication", gain: 0.3, description: "You learned from experienced colleagues." }
+        },
+        { 
+          text: "Develop a novel legal strategy", 
+          outcome: { skill: "legal", gain: 0.5, description: "Your legal creativity was impressive." }
+        }
+      ]
+    },
+    {
+      title: "Ethical Dilemma",
+      description: "You've discovered potentially problematic information about a client. What do you do?",
+      choices: [
+        { 
+          text: "Address it directly with the client", 
+          outcome: { skill: "ethics", gain: 0.5, description: "Your ethical judgment improved!" }
+        },
+        { 
+          text: "Consult the ethics committee", 
+          outcome: { skill: "legal", gain: 0.4, description: "You navigated a complex ethical situation." }
+        },
+        { 
+          text: "Research relevant precedents", 
+          outcome: { skill: "legal", gain: 0.3, description: "You deepened your understanding of legal ethics." }
+        }
+      ]
+    }
+  ]
 };
 
 // Game reducer to handle all game actions
@@ -63,21 +515,73 @@ function gameReducer(state, action) {
       // Add click XP (consistent amount regardless of job)
       const clickXP = 1 + (state.level * 0.1); // Base XP + 10% per level
       
-      let newExperience = state.experience + clickXP;
-      let newLevel = state.level;
-      
-      // Check for level up (cap at 100)
-      const MAX_LEVEL = 100;
-      if (newExperience >= experienceNeededForLevel(state.level) && state.level < MAX_LEVEL) {
-        newExperience -= experienceNeededForLevel(state.level);
-        newLevel++;
+      // Update job experience if player has a job
+      if (state.playerStatus.job) {
+        // Add base experience for this job level
+        const expGain = 1;
+        const newJobExperience = state.playerStatus.jobExperience + expGain;
+        
+        // Check if player reached next level of experience
+        const expNeeded = jobExperienceNeededForLevel(state.playerStatus.job.level);
+        let updatedJobLevel = state.playerStatus.job.level;
+        let updatedJobTitle = state.playerStatus.job.title;
+        let updatedJobPay = state.playerStatus.job.payPerClick;
+        let updatedJobReadyForPromotion = state.playerStatus.job.readyForPromotion || false;
+        
+        // If we gained enough experience for a level-up
+        if (newJobExperience >= expNeeded) {
+          // Increase job level
+          updatedJobLevel += 1;
+          
+          // Reset job experience for next level
+          const newJobExperience = 0;
+          
+          // Check if this is a promotion milestone (every 10 levels)
+          if (updatedJobLevel % 10 === 0) {
+            // Mark as ready for promotion rather than auto-promoting
+            updatedJobReadyForPromotion = true;
+          } else {
+            // Just a regular level up, update title and pay
+            updatedJobTitle = getJobTitleForLevel(state.playerStatus.job.category, updatedJobLevel);
+            updatedJobPay = calculatePayForLevel(state.playerStatus.job.basePayPerClick || state.playerStatus.job.payPerClick, updatedJobLevel);
+          }
+          
+          return {
+            ...state,
+            money: state.money + clickValue,
+            playerStatus: {
+              ...state.playerStatus,
+              jobExperience: newJobExperience,
+              job: {
+                ...state.playerStatus.job,
+                level: updatedJobLevel,
+                title: updatedJobTitle,
+                payPerClick: updatedJobPay,
+                readyForPromotion: updatedJobReadyForPromotion
+              }
+            }
+          };
+        }
+        
+        // No level up, just update experience
+        return {
+          ...state,
+          money: state.money + clickValue,
+          playerStatus: {
+            ...state.playerStatus,
+            jobExperience: newJobExperience,
+            job: {
+              ...state.playerStatus.job,
+              readyForPromotion: updatedJobReadyForPromotion
+            }
+          }
+        };
       }
       
+      // If no job, just add money
       return {
         ...state,
-        money: state.money + clickValue, // Add click value
-        experience: newExperience,
-        level: newLevel,
+        money: state.money + clickValue
       };
     }
     
@@ -93,6 +597,37 @@ function gameReducer(state, action) {
       
       // Earn experience based on income
       const incomeXP = income * elapsed * 0.1; // 1 XP per $10 earned
+      
+      // Add passive job experience based on time if employed
+      let jobExperience = state.playerStatus.jobExperience || 0;
+      let currentJobLevel = state.playerStatus.job?.level || 1;
+      let updatedJob = state.playerStatus.job;
+      
+      if (state.playerStatus.job) {
+        // Passive job experience gain (much slower than active clicking)
+        const passiveJobXP = elapsed * 0.1; // 0.1 XP per second
+        jobExperience += passiveJobXP;
+        
+        // Check for job level up
+        const experienceNeeded = jobExperienceNeededForLevel(currentJobLevel);
+        if (jobExperience >= experienceNeeded) {
+          jobExperience -= experienceNeeded;
+          currentJobLevel += 1;
+          
+          // Update job title and pay based on new level
+          updatedJob = {
+            ...state.playerStatus.job,
+            level: currentJobLevel,
+            title: state.playerStatus.job.baseTitle || state.playerStatus.job.title,
+            payPerClick: calculatePayForLevel(state.playerStatus.job.basePayPerClick, currentJobLevel)
+          };
+          
+          // Update job title based on level and category
+          if (state.playerStatus.job.category) {
+            updatedJob.title = getJobTitleForLevel(state.playerStatus.job.category, currentJobLevel);
+          }
+        }
+      }
       
       let newExperience = state.experience + incomeXP;
       let newLevel = state.level;
@@ -110,6 +645,11 @@ function gameReducer(state, action) {
         lastUpdate: now,
         experience: newExperience,
         level: newLevel,
+        playerStatus: {
+          ...state.playerStatus,
+          job: updatedJob,
+          jobExperience: jobExperience
+        }
       };
     }
     
@@ -155,6 +695,7 @@ function gameReducer(state, action) {
         playerStatus: {
           ...state.playerStatus,
           background: background,
+          jobExperience: 0
         },
         skills: randomSkills
       };
@@ -210,20 +751,65 @@ function gameReducer(state, action) {
     }
     
     case 'GET_JOB': {
-      // Ensure job has both payPerClick and hourlyPay properties
-      const jobPayload = {
-        ...action.payload,
-        // Make sure hourlyPay exists if only payPerClick was provided
-        hourlyPay: action.payload.hourlyPay || action.payload.payPerClick,
-        // Make sure payPerClick exists if only hourlyPay was provided
-        payPerClick: action.payload.payPerClick || action.payload.hourlyPay
-      };
+      // Extract basic details from the provided job
+      const { title, category, hourlyPay, payPerClick, level = 1, basePayPerClick } = action.payload;
+      
+      // Use hourlyPay if provided, otherwise use payPerClick
+      const jobPayPerClick = hourlyPay || payPerClick;
+      const jobBasePayPerClick = basePayPerClick || jobPayPerClick;
       
       return {
         ...state,
         playerStatus: {
           ...state.playerStatus,
-          job: jobPayload,
+          jobExperience: 0, // Reset job experience when getting a new job
+          job: {
+            title,
+            category,
+            payPerClick: jobPayPerClick,
+            basePayPerClick: jobBasePayPerClick,
+            level: level || 1,
+            readyForPromotion: false // Reset promotion status
+          }
+        }
+      };
+    }
+    
+    case 'ADD_JOB_EXPERIENCE': {
+      if (!state.playerStatus.job) return state;
+      
+      // Add job experience
+      const experienceToAdd = action.payload || 1;
+      let jobExperience = (state.playerStatus.jobExperience || 0) + experienceToAdd;
+      let currentJobLevel = state.playerStatus.job.level || 1;
+      let updatedJob = state.playerStatus.job;
+      
+      // Check for job level up
+      const experienceNeeded = jobExperienceNeededForLevel(currentJobLevel);
+      if (jobExperience >= experienceNeeded) {
+        jobExperience -= experienceNeeded;
+        currentJobLevel += 1;
+        
+        // Update job title and pay based on new level
+        updatedJob = {
+          ...state.playerStatus.job,
+          level: currentJobLevel,
+          title: state.playerStatus.job.baseTitle || state.playerStatus.job.title,
+          payPerClick: calculatePayForLevel(state.playerStatus.job.basePayPerClick, currentJobLevel)
+        };
+        
+        // Update job title based on level and category
+        if (state.playerStatus.job.category) {
+          updatedJob.title = getJobTitleForLevel(state.playerStatus.job.category, currentJobLevel);
+        }
+      }
+      
+      return {
+        ...state,
+        playerStatus: {
+          ...state.playerStatus,
+          job: updatedJob,
+          jobExperience: jobExperience
         }
       };
     }
@@ -400,6 +986,113 @@ function gameReducer(state, action) {
       };
     }
     
+    case 'SHOW_WORK_EVENT_NOTIFICATION': {
+      return {
+        ...state,
+        workEvents: {
+          ...state.workEvents,
+          notificationVisible: true
+        }
+      };
+    }
+    
+    case 'HIDE_WORK_EVENT_NOTIFICATION': {
+      return {
+        ...state,
+        workEvents: {
+          ...state.workEvents,
+          notificationVisible: false
+        }
+      };
+    }
+    
+    case 'HANDLE_WORK_EVENT_CHOICE': {
+      if (!state.workEvents.pendingEvent) return state;
+      
+      const { choiceIndex } = action.payload;
+      const event = state.workEvents.pendingEvent;
+      const choice = event.choices[choiceIndex];
+      
+      if (!choice || !choice.outcome) return state;
+      
+      // Apply the outcome
+      const outcome = choice.outcome;
+      const skillName = outcome.skill;
+      const skillGain = outcome.gain;
+      
+      // Add the skill gain
+      return {
+        ...state,
+        skills: {
+          ...state.skills,
+          [skillName]: (state.skills[skillName] || 0) + skillGain
+        },
+        workEvents: {
+          ...state.workEvents,
+          pendingEvent: null,
+          notificationVisible: false
+        }
+      };
+    }
+    
+    case 'DISMISS_WORK_EVENT': {
+      return {
+        ...state,
+        workEvents: {
+          ...state.workEvents,
+          pendingEvent: null,
+          notificationVisible: false
+        }
+      };
+    }
+    
+    case 'APPLY_FOR_PROMOTION': {
+      const { job } = action.payload;
+      const currentJob = state.playerStatus.job;
+      
+      // Make sure the player has a job and is ready for promotion
+      if (!currentJob || !currentJob.readyForPromotion) {
+        return state;
+      }
+      
+      // Ensure the new job is actually a promotion (same category, higher level)
+      if (job.category !== currentJob.category || job.level <= currentJob.level) {
+        return state;
+      }
+      
+      // Apply the promotion
+      return {
+        ...state,
+        playerStatus: {
+          ...state.playerStatus,
+          job: {
+            ...job,
+            level: currentJob.level + 1, // Increment level by 1 for the promotion
+            basePayPerClick: job.payPerClick,
+            payPerClick: job.payPerClick, // Use the new job's pay
+            baseTitle: job.title, // Store the base title
+            readyForPromotion: false
+          }
+        }
+      };
+    }
+    
+    case 'SELECT_TRANSPORTATION': {
+      return {
+        ...state,
+        playerStatus: {
+          ...state.playerStatus,
+          transportation: action.payload
+        }
+      };
+    }
+    
+    case 'UPDATE_MONEY':
+      return {
+        ...state,
+        money: Math.max(0, state.money + action.payload)
+      };
+    
     default:
       return state;
   }
@@ -428,8 +1121,20 @@ export function GameProvider({ children }) {
     }
   }, [state.playerStatus.background, state.skills]);
   
+  const updateMoney = (amount) => {
+    dispatch({ type: 'UPDATE_MONEY', payload: amount });
+  };
+  
   return (
-    <GameContext.Provider value={{ state, dispatch }}>
+    <GameContext.Provider 
+      value={{ 
+        state, 
+        dispatch, 
+        jobExperienceNeededForLevel, 
+        getJobTitleForLevel,
+        updateMoney
+      }}
+    >
       {children}
     </GameContext.Provider>
   );

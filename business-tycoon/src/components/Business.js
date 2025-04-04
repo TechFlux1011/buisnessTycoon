@@ -103,7 +103,7 @@ const Business = () => {
           <div className="business-card owned">
             <div className="business-header">
               <div className="business-icon">{state.playerStatus.business.image}</div>
-              <h3>{state.playerStatus.business.name} (Level {state.playerStatus.business.level})</h3>
+              <h3>{state.playerStatus.business.name} <span className="level-badge level-intermediate">Level {state.playerStatus.business.level}</span></h3>
             </div>
             <p className="business-description">{state.playerStatus.business.description}</p>
             <p className="business-income">Income: ${state.playerStatus.business.income.toFixed(2)}/sec</p>
@@ -112,9 +112,9 @@ const Business = () => {
               <div className="upgrade-section">
                 <h4>Available Upgrade: {getNextUpgrade().name}</h4>
                 <p>Cost: ${getNextUpgrade().cost.toLocaleString()}</p>
-                <p>Income Boost: +{(getNextUpgrade().incomeMultiplier * 100).toFixed(0)}%</p>
+                <p>Income Boost: <span className="boost-text">+{(getNextUpgrade().incomeMultiplier * 100).toFixed(0)}%</span></p>
                 {state.playerStatus.background === 'poor' && (
-                  <p className="bonus">Poor Background Bonus: +10% income</p>
+                  <p className="bonus">Poor Background Bonus: <span className="boost-text">+10% income</span></p>
                 )}
                 <button 
                   className="upgrade-button"
@@ -126,7 +126,7 @@ const Business = () => {
               </div>
             ) : (
               <div className="max-level">
-                <p>Max Level Reached!</p>
+                <p><span className="badge badge-warning">Max Level Reached!</span></p>
               </div>
             )}
           </div>
@@ -144,31 +144,31 @@ const Business = () => {
             className={priceFilter === 'all' ? 'active' : ''} 
             onClick={() => setPriceFilter('all')}
           >
-            All
+            <span className="price-badge price-all">All</span>
           </button>
           <button 
             className={priceFilter === 'affordable' ? 'active' : ''} 
             onClick={() => setPriceFilter('affordable')}
           >
-            Affordable
+            <span className="price-badge price-affordable">Affordable</span>
           </button>
           <button 
             className={priceFilter === 'low' ? 'active' : ''} 
             onClick={() => setPriceFilter('low')}
           >
-            Low (&lt;$100k)
+            <span className="price-badge price-low">Low (&lt;$100k)</span>
           </button>
           <button 
             className={priceFilter === 'medium' ? 'active' : ''} 
             onClick={() => setPriceFilter('medium')}
           >
-            Medium ($100k-$1M)
+            <span className="price-badge price-medium">Medium ($100k-$1M)</span>
           </button>
           <button 
             className={priceFilter === 'high' ? 'active' : ''} 
             onClick={() => setPriceFilter('high')}
           >
-            High (&gt;$1M)
+            <span className="price-badge price-high">High (&gt;$1M)</span>
           </button>
         </div>
       </div>
@@ -192,9 +192,9 @@ const Business = () => {
               <div className="business-details">
                 <p>Cost: ${cost.toLocaleString()}</p>
                 <p>Income: ${business.baseIncome.toFixed(2)}/sec</p>
-                <p className="roi">ROI: {((business.baseIncome * 3600 * 24 * 365 / cost) * 100).toFixed(2)}% annually</p>
+                <p className="roi">ROI: <span className="boost-text">{((business.baseIncome * 3600 * 24 * 365 / cost) * 100).toFixed(2)}% annually</span></p>
                 {state.playerStatus.background === 'poor' && (
-                  <p className="discount">Poor Background Discount: 20% off</p>
+                  <p className="discount">Poor Background Discount: <span className="boost-text">20% off</span></p>
                 )}
               </div>
               <button 

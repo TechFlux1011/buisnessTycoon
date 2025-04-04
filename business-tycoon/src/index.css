@@ -1,18 +1,17 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import custom variables */
+@import './styles/Variables.css';
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-family);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #e9ecef;
-  color: #212529;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 code {
@@ -20,15 +19,61 @@ code {
     monospace;
 }
 
-button {
-  cursor: pointer;
-}
+/* Custom utility classes that extend Tailwind */
+@layer components {
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-2xl text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800;
+  }
+  
+  .badge-secondary {
+    @apply bg-secondary-100 text-secondary-800;
+  }
+  
+  .badge-success {
+    @apply bg-success-100 text-success-800;
+  }
+  
+  .badge-warning {
+    @apply bg-warning-100 text-warning-800;
+  }
+  
+  .badge-danger {
+    @apply bg-danger-100 text-danger-800;
+  }
 
-h1, h2, h3, h4, h5, h6 {
-  margin-top: 0;
-  line-height: 1.2;
-}
-
-p {
-  line-height: 1.5;
+  .btn {
+    @apply px-4 py-2 rounded-xl font-medium transition-colors duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-600 text-white hover:bg-secondary-700;
+  }
+  
+  .btn-success {
+    @apply bg-success-600 text-white hover:bg-success-700;
+  }
+  
+  .btn-warning {
+    @apply bg-warning-600 text-black hover:bg-warning-700;
+  }
+  
+  .btn-danger {
+    @apply bg-danger-600 text-white hover:bg-danger-700;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent border border-current;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-md p-4;
+  }
 }

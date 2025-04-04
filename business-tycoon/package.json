@@ -35,5 +35,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.0"
+  },
+  "comment": "Using Alpha Vantage API (free tier) for stock market data. For production use, consider using a paid API with higher rate limits."
 }

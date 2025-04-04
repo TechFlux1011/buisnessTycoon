@@ -13,60 +13,60 @@ export const skillCategories = {
 // Entry-level job options
 export const entryLevelJobs = {
   poor: [
-    { id: 'fastfood', title: 'Fast Food Worker', payPerClick: 8, category: 'food', description: 'Flipping burgers for minimum wage', requirements: { food: 1 } },
-    { id: 'retail', title: 'Retail Associate', payPerClick: 9, category: 'sales', description: 'Helping customers and stocking shelves', requirements: { communication: 1 } },
-    { id: 'delivery', title: 'Delivery Driver', payPerClick: 10, category: 'service', description: 'Delivering packages around town', requirements: { management: 1 } },
+    { id: 'fastfood', title: 'Fast Food Worker', hourlyPay: 15, payPerClick: 0.25, category: 'food', description: 'Flipping burgers for minimum wage', requirements: { food: 1 } },
+    { id: 'retail', title: 'Retail Associate', hourlyPay: 16.20, payPerClick: 0.27, category: 'sales', description: 'Helping customers and stocking shelves', requirements: { communication: 1 } },
+    { id: 'delivery', title: 'Delivery Driver', hourlyPay: 19.80, payPerClick: 0.33, category: 'service', description: 'Delivering packages around town', requirements: { management: 1 } },
   ],
   rich: [
-    { id: 'intern', title: 'Corporate Intern', payPerClick: 12, category: 'management', description: 'Getting coffee and making copies', requirements: { management: 1 } },
-    { id: 'assistant', title: 'Executive Assistant', payPerClick: 15, category: 'management', description: 'Managing schedules and emails', requirements: { communication: 1 } },
-    { id: 'sales', title: 'Junior Sales Rep', payPerClick: 18, category: 'sales', description: 'Making cold calls and following up leads', requirements: { business: 1 } },
+    { id: 'intern', title: 'Corporate Intern', hourlyPay: 19.80, payPerClick: 0.33, category: 'management', description: 'Getting coffee and making copies', requirements: { management: 1 } },
+    { id: 'assistant', title: 'Executive Assistant', hourlyPay: 25.20, payPerClick: 0.42, category: 'management', description: 'Managing schedules and emails', requirements: { communication: 1 } },
+    { id: 'sales', title: 'Junior Sales Rep', hourlyPay: 30, payPerClick: 0.50, category: 'sales', description: 'Making cold calls and following up leads', requirements: { business: 1 } },
   ]
 };
 
 // Mid-level jobs
 export const midLevelJobs = [
-  { id: 'manager', title: 'Shift Manager', payPerClick: 25, category: 'management', description: 'Managing a team of workers', requirements: { management: 2 } },
-  { id: 'technician', title: 'IT Technician', payPerClick: 30, category: 'technical', description: 'Troubleshooting tech issues', requirements: { technical: 2 } },
-  { id: 'accountant', title: 'Junior Accountant', payPerClick: 35, category: 'financial', description: 'Balancing the books', requirements: { financial: 2 } },
-  { id: 'teacher', title: 'Teaching Assistant', payPerClick: 28, category: 'education', description: 'Helping to educate the next generation', requirements: { education: 2 } },
-  { id: 'nurse', title: 'Nursing Assistant', payPerClick: 40, category: 'healthcare', description: 'Helping patients in healthcare facilities', requirements: { healthcare: 2 } },
-  { id: 'chef', title: 'Line Cook', payPerClick: 32, category: 'food', description: 'Preparing meals in a restaurant kitchen', requirements: { food: 2 } },
+  { id: 'manager', title: 'Shift Manager', hourlyPay: 40.20, payPerClick: 0.67, category: 'management', description: 'Managing a team of workers', requirements: { management: 2 } },
+  { id: 'technician', title: 'IT Technician', hourlyPay: 45, payPerClick: 0.75, category: 'technical', description: 'Troubleshooting tech issues', requirements: { technical: 2 } },
+  { id: 'accountant', title: 'Junior Accountant', hourlyPay: 49.80, payPerClick: 0.83, category: 'financial', description: 'Balancing the books', requirements: { financial: 2 } },
+  { id: 'teacher', title: 'Teaching Assistant', hourlyPay: 34.80, payPerClick: 0.58, category: 'education', description: 'Helping to educate the next generation', requirements: { education: 2 } },
+  { id: 'nurse', title: 'Nursing Assistant', hourlyPay: 42.60, payPerClick: 0.71, category: 'healthcare', description: 'Helping patients in healthcare facilities', requirements: { healthcare: 2 } },
+  { id: 'chef', title: 'Line Cook', hourlyPay: 36, payPerClick: 0.6, category: 'food', description: 'Preparing meals in a restaurant kitchen', requirements: { food: 2 } },
 ];
 
 // Senior jobs
 export const seniorJobs = [
-  { id: 'director', title: 'Department Director', payPerClick: 80, category: 'management', description: 'Leading an entire department', requirements: { management: 4, leadership: 2 } },
-  { id: 'developer', title: 'Senior Developer', payPerClick: 100, category: 'technical', description: 'Building complex software systems', requirements: { technical: 4, education: 1 } },
-  { id: 'financial_advisor', title: 'Financial Advisor', payPerClick: 120, category: 'financial', description: 'Advising clients on financial matters', requirements: { financial: 4, business: 1 } },
-  { id: 'physician', title: 'Physician', payPerClick: 150, category: 'healthcare', description: 'Diagnosing and treating patients', requirements: { healthcare: 5, education: 2 } },
-  { id: 'lawyer', title: 'Attorney', payPerClick: 140, category: 'legal', description: 'Providing legal counsel', requirements: { legal: 5, communication: 3 } },
-  { id: 'stockbroker', title: 'Stock Broker', payPerClick: 135, category: 'financial', description: 'Trading stocks and securities for clients', requirements: { financial: 3, management: 2 } },
-  { id: 'product_manager', title: 'Product Manager', payPerClick: 130, category: 'management', description: 'Overseeing product development and launches', requirements: { management: 3, technical: 2 } },
-  { id: 'executive_chef', title: 'Executive Chef', payPerClick: 110, category: 'food', description: 'Running restaurant kitchens and creating menus', requirements: { food: 4, management: 2 } },
+  { id: 'director', title: 'Department Director', hourlyPay: 109.80, payPerClick: 1.83, category: 'management', description: 'Leading an entire department', requirements: { management: 4, leadership: 2 } },
+  { id: 'developer', title: 'Senior Developer', hourlyPay: 120, payPerClick: 2.0, category: 'technical', description: 'Building complex software systems', requirements: { technical: 4, education: 1 } },
+  { id: 'financial_advisor', title: 'Financial Advisor', hourlyPay: 100.20, payPerClick: 1.67, category: 'financial', description: 'Advising clients on financial matters', requirements: { financial: 4, business: 1 } },
+  { id: 'physician', title: 'Physician', hourlyPay: 229.80, payPerClick: 3.83, category: 'healthcare', description: 'Diagnosing and treating patients', requirements: { healthcare: 5, education: 2 } },
+  { id: 'lawyer', title: 'Attorney', hourlyPay: 199.80, payPerClick: 3.33, category: 'legal', description: 'Providing legal counsel', requirements: { legal: 5, communication: 3 } },
+  { id: 'stockbroker', title: 'Stock Broker', hourlyPay: 160.20, payPerClick: 2.67, category: 'financial', description: 'Trading stocks and securities for clients', requirements: { financial: 3, management: 2 } },
+  { id: 'product_manager', title: 'Product Manager', hourlyPay: 150, payPerClick: 2.5, category: 'management', description: 'Overseeing product development and launches', requirements: { management: 3, technical: 2 } },
+  { id: 'executive_chef', title: 'Executive Chef', hourlyPay: 105, payPerClick: 1.75, category: 'food', description: 'Running restaurant kitchens and creating menus', requirements: { food: 4, management: 2 } },
 ];
 
 // Executive jobs (added for late-game)
 export const executiveJobs = [
-  { id: 'ceo', title: 'CEO', payPerClick: 500, category: 'management', description: 'Chief Executive Officer running an entire company', requirements: { management: 8, leadership: 6, business: 5 } },
-  { id: 'cto', title: 'CTO', payPerClick: 450, category: 'technical', description: 'Chief Technology Officer overseeing all tech operations', requirements: { technical: 8, leadership: 4 } },
-  { id: 'cfo', title: 'CFO', payPerClick: 450, category: 'financial', description: 'Chief Financial Officer managing company finances', requirements: { financial: 8, management: 3 } },
-  { id: 'surgeon', title: 'Neurosurgeon', payPerClick: 600, category: 'healthcare', description: 'Performing complex brain surgeries', requirements: { healthcare: 10, education: 6 } },
-  { id: 'judge', title: 'Federal Judge', payPerClick: 400, category: 'legal', description: 'Presiding over important federal cases', requirements: { legal: 10, ethics: 5 } },
-  { id: 'investment_banker', title: 'Investment Banker', payPerClick: 480, category: 'financial', description: 'Managing high-profile financial transactions and mergers', requirements: { financial: 7, management: 5 } },
-  { id: 'tech_entrepreneur', title: 'Tech Entrepreneur', payPerClick: 520, category: 'technical', description: 'Founding and leading innovative tech companies', requirements: { technical: 6, leadership: 4, business: 5 } },
-  { id: 'hedge_fund_manager', title: 'Hedge Fund Manager', payPerClick: 550, category: 'financial', description: 'Managing a portfolio of high-risk, high-reward investments', requirements: { financial: 8, business: 6 } },
-  { id: 'celebrity_chef', title: 'Celebrity Chef', payPerClick: 480, category: 'food', description: 'Running multiple restaurants and media enterprises', requirements: { food: 8, communication: 5, business: 4 } },
+  { id: 'ceo', title: 'CEO', hourlyPay: 499.80, payPerClick: 8.33, category: 'management', description: 'Chief Executive Officer running an entire company', requirements: { management: 8, leadership: 6, business: 5 } },
+  { id: 'cto', title: 'CTO', hourlyPay: 424.80, payPerClick: 7.08, category: 'technical', description: 'Chief Technology Officer overseeing all tech operations', requirements: { technical: 8, leadership: 4 } },
+  { id: 'cfo', title: 'CFO', hourlyPay: 450, payPerClick: 7.5, category: 'financial', description: 'Chief Financial Officer managing company finances', requirements: { financial: 8, management: 3 } },
+  { id: 'surgeon', title: 'Neurosurgeon', hourlyPay: 649.80, payPerClick: 10.83, category: 'healthcare', description: 'Performing complex brain surgeries', requirements: { healthcare: 10, education: 6 } },
+  { id: 'judge', title: 'Federal Judge', hourlyPay: 400.20, payPerClick: 6.67, category: 'legal', description: 'Presiding over important federal cases', requirements: { legal: 10, ethics: 5 } },
+  { id: 'investment_banker', title: 'Investment Banker', hourlyPay: 529.80, payPerClick: 8.83, category: 'financial', description: 'Managing high-profile financial transactions and mergers', requirements: { financial: 7, management: 5 } },
+  { id: 'tech_entrepreneur', title: 'Tech Entrepreneur', hourlyPay: 450, payPerClick: 7.5, category: 'technical', description: 'Founding and leading innovative tech companies', requirements: { technical: 6, leadership: 4, business: 5 } },
+  { id: 'hedge_fund_manager', title: 'Hedge Fund Manager', hourlyPay: 850.20, payPerClick: 14.17, category: 'financial', description: 'Managing a portfolio of high-risk, high-reward investments', requirements: { financial: 8, business: 6 } },
+  { id: 'celebrity_chef', title: 'Celebrity Chef', hourlyPay: 300, payPerClick: 5.0, category: 'food', description: 'Running multiple restaurants and media enterprises', requirements: { food: 8, communication: 5, business: 4 } },
 ];
 
 // Company owner jobs (top level of career path)
 export const ownerJobs = [
-  { id: 'company_chairman', title: 'Company Chairman', payPerClick: 1000, category: 'management', description: 'Chairman of the Board with controlling interest in multiple corporations', requirements: { management: 10, leadership: 8, business: 7, ethics: 3 } },
-  { id: 'tech_mogul', title: 'Tech Mogul', payPerClick: 1200, category: 'technical', description: 'Owner of multiple technology companies and venture capital funds', requirements: { technical: 10, business: 8, leadership: 6, education: 4 } },
-  { id: 'finance_tycoon', title: 'Finance Tycoon', payPerClick: 1500, category: 'financial', description: 'Controlling shareholder in major financial institutions and investment firms', requirements: { financial: 10, business: 8, ethics: 4, management: 6 } },
-  { id: 'hospital_owner', title: 'Healthcare Magnate', payPerClick: 1800, category: 'healthcare', description: 'Owner of a network of hospitals and medical research facilities', requirements: { healthcare: 12, education: 8, management: 6, ethics: 5 } },
-  { id: 'law_firm_founder', title: 'Law Firm Founder', payPerClick: 1200, category: 'legal', description: 'Founding partner of a prestigious international law firm', requirements: { legal: 12, ethics: 8, communication: 6, business: 5 } },
-  { id: 'restaurant_mogul', title: 'Restaurant Mogul', payPerClick: 1400, category: 'food', description: 'Owner of a global restaurant empire and food production companies', requirements: { food: 10, business: 8, creativity: 6, management: 7 } },
+  { id: 'company_chairman', title: 'Company Chairman', hourlyPay: 1999.80, payPerClick: 33.33, category: 'management', description: 'Chairman of the Board with controlling interest in multiple corporations', requirements: { management: 10, leadership: 8, business: 7, ethics: 3 } },
+  { id: 'tech_mogul', title: 'Tech Mogul', hourlyPay: 2500.20, payPerClick: 41.67, category: 'technical', description: 'Owner of multiple technology companies and venture capital funds', requirements: { technical: 10, business: 8, leadership: 6, education: 4 } },
+  { id: 'finance_tycoon', title: 'Finance Tycoon', hourlyPay: 3499.80, payPerClick: 58.33, category: 'financial', description: 'Controlling shareholder in major financial institutions and investment firms', requirements: { financial: 10, business: 8, ethics: 4, management: 6 } },
+  { id: 'hospital_owner', title: 'Healthcare Magnate', hourlyPay: 2500.20, payPerClick: 41.67, category: 'healthcare', description: 'Owner of a network of hospitals and medical research facilities', requirements: { healthcare: 12, education: 8, management: 6, ethics: 5 } },
+  { id: 'law_firm_founder', title: 'Law Firm Founder', hourlyPay: 3000, payPerClick: 50.0, category: 'legal', description: 'Founding partner of a prestigious international law firm', requirements: { legal: 12, ethics: 8, communication: 6, business: 5 } },
+  { id: 'restaurant_mogul', title: 'Restaurant Mogul', hourlyPay: 1999.80, payPerClick: 33.33, category: 'food', description: 'Owner of a global restaurant empire and food production companies', requirements: { food: 10, business: 8, creativity: 6, management: 7 } },
 ];
 
 // Assets that generate passive income
