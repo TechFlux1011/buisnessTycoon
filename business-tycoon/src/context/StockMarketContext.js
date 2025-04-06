@@ -75,9 +75,8 @@ const initializeStockData = () => {
     nowAverage: {
       currentValue: initialAverage,
       previousValue: initialAverage,
-      valueHistory: Array(50).fill(initialAverage).map(value => 
-        value * (1 + (Math.random() * 0.05 - 0.025))
-      ),
+      // Initialize with a single value (market open value)
+      valueHistory: [initialAverage],
       percentChange: 0,
       trending: 'neutral',
       name: 'NOW Average',
@@ -497,7 +496,7 @@ const stockMarketReducer = (state, action) => {
         ...state.nowAverage,
         previousValue: previousValue,
         currentValue: newAverageValue,
-        valueHistory: [...state.nowAverage.valueHistory, newAverageValue].slice(-50),
+        valueHistory: [...state.nowAverage.valueHistory, newAverageValue],
         percentChange: avgPercentChange,
         trending: avgTrending,
         description: getMarketStatusMessage(avgPercentChange)
@@ -518,6 +517,31 @@ const stockMarketReducer = (state, action) => {
         nowAverage: action.payload.nowAverage,
         lastPriceRecordTime: action.payload.timestamp,
         lastUpdate: new Date().toLocaleTimeString()
+      };
+
+    case 'MARKET_DAY_ADVANCE':
+      // Get the current NOW Average value
+      const currentAvgValue = state.nowAverage.currentValue;
+      
+      // Reset the NOW Average history with only the current value
+      const resetNowAverage = {
+        ...state.nowAverage,
+        valueHistory: [currentAvgValue],
+      };
+      
+      return {
+        ...state,
+        marketDay: state.marketDay + 1,
+        marketHour: 9,
+        marketMinute: 30,
+        nowAverage: resetNowAverage
+      };
+
+    case 'UPDATE_MARKET_TIME':
+      return {
+        ...state,
+        marketHour: action.payload.hour,
+        marketMinute: action.payload.minute
       };
 
     default:
@@ -735,7 +759,7 @@ export const StockMarketProvider = ({ children }) => {
       
       // Update price history - don't allow negative prices
       const safePriceValue = Math.max(0.01, newPrice);
-      const updatedHistory = [...company.priceHistory, safePriceValue].slice(-50);
+      const updatedHistory = [...company.priceHistory, safePriceValue];
       
       // Calculate new day high/low
       const newDayHigh = Math.max(company.dayHigh, safePriceValue);
@@ -793,7 +817,7 @@ export const StockMarketProvider = ({ children }) => {
         ...index,
         previousValue: index.currentValue,
         currentValue: newValue,
-        valueHistory: [...index.valueHistory, newValue].slice(-50),
+        valueHistory: [...index.valueHistory, newValue],
         percentChange: ((newValue / index.previousValue) - 1) * 100,
         trending: indexTrend
       };
@@ -818,18 +842,16 @@ export const StockMarketProvider = ({ children }) => {
     if (nowPercentChange > 0.08) nowTrending = 'up';
     else if (nowPercentChange < -0.08) nowTrending = 'down';
     
-    // Update NOW Average history - ensure we're keeping at least 60 points for the chart
+    // Update NOW Average history - preserve all data points for the day to show continuous line
+    // Instead of slicing to keep only the last 60 points, we keep the full history for the day
     const updatedNOWHistory = [...stockMarket.nowAverage.valueHistory, nowAverageValue];
-    // Only keep the last 60 points to match the stock charts
-    const limitedNOWHistory = updatedNOWHistory.length > 60 ? 
-      updatedNOWHistory.slice(-60) : updatedNOWHistory;
     
     // Create updated NOW Average object
     const updatedNOWAverage = {
       ...stockMarket.nowAverage,
       previousValue: previousNOWAverage,
       currentValue: nowAverageValue,
-      valueHistory: limitedNOWHistory,
+      valueHistory: updatedNOWHistory,
       percentChange: nowPercentChange,
       trending: nowTrending,
       description: getMarketStatusMessage(nowPercentChange)
@@ -1216,12 +1238,12 @@ export const StockMarketProvider = ({ children }) => {
       if (avgPercentChange > 0.05) avgTrending = 'up';
       else if (avgPercentChange < -0.05) avgTrending = 'down';
       
-      // Create updated NOW Average
+      // Create updated NOW Average - keep entire day's history
       const updatedAverage = {
         ...stockMarket.nowAverage,
         previousValue: prevAvgValue,
         currentValue: newAvgValue,
-        valueHistory: [...stockMarket.nowAverage.valueHistory, newAvgValue].slice(-50),
+        valueHistory: [...stockMarket.nowAverage.valueHistory, newAvgValue],
         percentChange: avgPercentChange,
         trending: avgTrending,
         description: getMarketStatusMessage(avgPercentChange)
@@ -1240,12 +1262,41 @@ export const StockMarketProvider = ({ children }) => {
     }
   }, [stockMarket.companies, stockMarket.marketOpen, stockMarket.nowAverage, clockTick]);
 
-  // Set up the internal clock interval
+  // Fix the useEffect for internal clock updates
   useEffect(() => {
-    // Create a 5-second interval for the internal clock
-    internalClockRef.current = setInterval(() => {
-      runInternalClock();
-    }, 5000);
+    if (!internalClockRef.current && runInternalClock) {
+      internalClockRef.current = setInterval(() => {
+        setClockTick(prev => prev + 1);
+        
+        // Run the internal clock update function
+        runInternalClock();
+        
+        // Advance market time
+        if (stockMarket.marketOpen) {
+          const newMinute = (stockMarket.marketMinute + 1) % 60;
+          let newHour = stockMarket.marketHour;
+          
+          if (newMinute === 0) {
+            newHour = (stockMarket.marketHour + 1) % 24;
+          }
+          
+          // Check if market day is ending (close at 4:00 PM)
+          if (newHour === 16 && newMinute === 0) {
+            // Market closes, prepare for next day
+            dispatch({ type: 'MARKET_DAY_ADVANCE' });
+          } else {
+            // Just update the time
+            dispatch({
+              type: 'UPDATE_MARKET_TIME',
+              payload: {
+                hour: newHour,
+                minute: newMinute
+              }
+            });
+          }
+        }
+      }, 5000); // Clock tick every 5 seconds
+    }
     
     // Clean up on unmount
     return () => {
@@ -1253,7 +1304,7 @@ export const StockMarketProvider = ({ children }) => {
         clearInterval(internalClockRef.current);
       }
     };
-  }, [runInternalClock]);
+  }, [runInternalClock, stockMarket.marketHour, stockMarket.marketMinute, stockMarket.marketOpen]);
   
   // Restore the recordPriceChanges function
   // Separate function to record price changes every 5 seconds

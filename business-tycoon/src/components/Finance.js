@@ -195,16 +195,6 @@ const Finance = () => {
       );
     }
     
-    // Get color based on trending direction
-    const valueColor = nowAverage.trending === 'up' ? 'text-green-500' : 
-                       nowAverage.trending === 'down' ? 'text-red-500' : 
-                       'text-gray-700';
-    
-    // Dark mode compatible colors
-    const darkValueColor = nowAverage.trending === 'up' ? 'dark:text-green-400' : 
-                          nowAverage.trending === 'down' ? 'dark:text-red-400' : 
-                          'dark:text-gray-300';
-    
     // Format values safely
     const formattedCurrentValue = typeof nowAverage.currentValue === 'number' 
       ? nowAverage.currentValue.toFixed(2) 
@@ -214,76 +204,64 @@ const Finance = () => {
       ? (nowAverage.percentChange >= 0 ? '+' : '') + nowAverage.percentChange.toFixed(2)
       : '0.00';
     
+    // Determine if market is up or down
+    const isUp = nowAverage.percentChange >= 0;
+    
     return (
-      <div className="now-average-container bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 mb-6 border-2 border-blue-100 dark:border-blue-900">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
-              NOW Average
-              <span className={`ml-2 text-sm px-2 py-1 rounded ${
-                nowAverage.trending === 'up' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
-                nowAverage.trending === 'down' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
-                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-              }`}>
-                {nowAverage.trending === 'up' ? 'Bullish' : 
-                 nowAverage.trending === 'down' ? 'Bearish' : 
-                 'Stable'}
-              </span>
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {nowAverage.description || 'Market data updating...'}
-            </p>
-          </div>
-          
-          <div className="mt-2 md:mt-0 flex flex-col items-end">
-            <div className={`text-2xl font-bold ${valueColor} ${darkValueColor}`}>
-              ${formattedCurrentValue}
+      <div className="now-average-container bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden mb-6">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                NOW Average
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Market Index
+              </p>
             </div>
-            <div className={`flex items-center ${nowAverage.percentChange >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-              <span>
-                {formattedPercentChange}%
-              </span>
-              {nowAverage.percentChange > 0 ? (
-                <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                </svg>
-              ) : nowAverage.percentChange < 0 ? (
-                <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              ) : null}
+            
+            <div className="flex flex-col items-end">
+              <div className="text-3xl font-bold text-gray-800 dark:text-white">
+                ${formattedCurrentValue}
+              </div>
+              <div className={`flex items-center ${isUp ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                <span className="text-sm font-medium">
+                  {formattedPercentChange}%
+                </span>
+                {isUp ? (
+                  <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                ) : (
+                  <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </div>
             </div>
           </div>
         </div>
         
-        {/* NOW Average Chart - Increased height for better visibility */}
-        <div className="now-average-chart-container h-40 md:h-56 mt-2">
+        <div className="h-40">
           {renderNOWAverageChart()}
         </div>
       </div>
     );
   };
   
-  // Add a useEffect to track NOW Average data
-  useEffect(() => {
-    if (stockMarket.nowAverage && stockMarket.nowAverage.valueHistory) {
-      // Store the NOW Average history in state
-      setNowAverageChartData(stockMarket.nowAverage.valueHistory);
-    }
-  }, [stockMarket.nowAverage]);
-  
-  // Update the renderNOWAverageChart function to use the state data
+  // Update the renderNOWAverageChart function to make it look like a standard stock chart
   const renderNOWAverageChart = () => {
     if (!stockMarket.nowAverage || !stockMarket.nowAverage.valueHistory || stockMarket.nowAverage.valueHistory.length === 0) {
       return <div className="flex items-center justify-center h-full">Loading chart data...</div>;
     }
     
-    // Use our local state data if available, otherwise use from stockMarket
-    const valueHistory = nowAverageChartData.length > 0 
-      ? nowAverageChartData 
-      : stockMarket.nowAverage.valueHistory;
-      
-    const { percentChange } = stockMarket.nowAverage;
+    // Use the entire price history for the day
+    const valueHistory = stockMarket.nowAverage.valueHistory;
+    
+    // Determine if the market is up or down for the day
+    const marketUp = valueHistory[valueHistory.length - 1] >= valueHistory[0];
+    const lineColor = marketUp ? '#22c55e' : '#ef4444';
+    const fillColor = marketUp ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
     
     // Ensure we have at least 2 data points for the chart
     if (valueHistory.length < 2) {
@@ -291,130 +269,102 @@ const Finance = () => {
     }
     
     // Chart dimensions
-    const chartHeight = 130;
+    const chartHeight = 160;
     const chartWidth = '100%';
     
-    // Find min and max for scaling
-    const minValue = Math.min(...valueHistory);
-    const maxValue = Math.max(...valueHistory);
+    // Find min and max for scaling with some padding
+    const minValue = Math.min(...valueHistory) * 0.995;
+    const maxValue = Math.max(...valueHistory) * 1.005;
     const valueRange = maxValue - minValue || 1; // Prevent division by zero
     
-    // Create points for SVG path - using absolute values
+    // Create SVG path
     const pathData = valueHistory.map((value, index) => {
       const x = (index / (valueHistory.length - 1)) * 100;
-      // Invert Y coordinate for SVG (0 is top)
       const y = chartHeight - ((value - minValue) / valueRange) * chartHeight;
       return `${index === 0 ? 'M' : 'L'} ${x}% ${y}`;
     }).join(' ');
     
-    // Also create points for polygon area fill
+    // Create polygon for area fill
     const polygonPoints = valueHistory.map((value, index) => {
       const x = `${(index / (valueHistory.length - 1)) * 100}%`;
-      // Invert Y coordinate for SVG (0 is top)
       const y = chartHeight - ((value - minValue) / valueRange) * chartHeight;
       return `${x},${y}`;
     }).join(' ') + ` 100%,${chartHeight} 0,${chartHeight}`;
     
-    // Determine line color based on trend
-    const lineColor = percentChange >= 0 ? 'var(--accent-green, #22c55e)' : 'var(--accent-red, #ef4444)';
-    
-    // Enhanced gradient fills for better visibility
-    const fillGradientId = percentChange >= 0 ? 'greenGradient' : 'redGradient';
-    
-    // Grid lines
-    const gridLines = [];
-    for (let i = 1; i < 5; i++) {
-      const y = (i * chartHeight) / 5;
-      gridLines.push(
-        <line
-          key={`grid-${i}`}
-          x1="0"
-          y1={y}
-          x2="100%"
-          y2={y}
-          stroke="var(--chart-grid-color, rgba(0, 0, 0, 0.1))"
-          strokeWidth="1"
-          strokeDasharray="5,5"
-        />
-      );
-    }
-    
-    // Calculate the last point position for the end dot
-    const lastPoint = valueHistory[valueHistory.length - 1];
-    const lastX = "100%";
-    const lastY = chartHeight - ((lastPoint - minValue) / valueRange) * chartHeight;
+    // Create simple time labels
+    const timeLabels = ['9:30', '11:00', '12:30', '14:00', '15:30'];
     
     return (
-      <div className="w-full h-full relative bg-gray-50 dark:bg-gray-900 rounded-md p-2">
+      <div className="w-full h-full relative bg-white dark:bg-gray-800 rounded-md overflow-hidden">
+        {/* Min/Max labels */}
+        <div className="absolute top-2 right-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+          ${maxValue.toFixed(2)}
+        </div>
+        <div className="absolute bottom-2 right-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+          ${minValue.toFixed(2)}
+        </div>
+        
         <svg 
           width={chartWidth} 
           height={chartHeight} 
           className="now-average-chart"
           preserveAspectRatio="none"
         >
-          {/* Define gradients */}
-          <defs>
-            <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(34, 197, 94, 0.5)" />
-              <stop offset="100%" stopColor="rgba(34, 197, 94, 0.05)" />
-            </linearGradient>
-            <linearGradient id="redGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(239, 68, 68, 0.5)" />
-              <stop offset="100%" stopColor="rgba(239, 68, 68, 0.05)" />
-            </linearGradient>
-          </defs>
-          
           {/* Grid lines */}
-          {gridLines}
-          
-          {/* Area fill under the line */}
-          <polygon
-            points={polygonPoints}
-            fill={`url(#${fillGradientId})`}
+          <line 
+            x1="0" 
+            y1={chartHeight/2} 
+            x2="100%" 
+            y2={chartHeight/2} 
+            stroke="rgba(0,0,0,0.1)" 
+            strokeWidth="1"
+            strokeDasharray="5,5"
           />
           
-          {/* Line using path instead of polyline for better control */}
+          {/* Area fill */}
+          <polygon
+            points={polygonPoints}
+            fill={fillColor}
+          />
+          
+          {/* Base line */}
+          <line 
+            x1="0" 
+            y1={chartHeight} 
+            x2="100%" 
+            y2={chartHeight} 
+            stroke="rgba(0,0,0,0.1)" 
+            strokeWidth="1"
+          />
+          
+          {/* Price line */}
           <path
             d={pathData}
             fill="none"
             stroke={lineColor}
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          
-          {/* Add a continuous shadow line for extra visibility */}
-          <path
-            d={pathData}
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeOpacity="0.3"
-            filter="blur(2px)"
-            style={{ transform: 'translateY(2px)' }}
-          />
-          
-          {/* Larger dot at the end of the line */}
-          <circle 
-            cx={lastX}
-            cy={lastY}
-            r="5" 
-            fill={lineColor}
-            stroke="#fff"
             strokeWidth="2"
-            filter="drop-shadow(0 1px 2px rgba(0,0,0,0.3))"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
+          
+          {/* Time labels */}
+          {timeLabels.map((label, index) => {
+            const x = (index / (timeLabels.length - 1)) * 100;
+            return (
+              <text 
+                key={index} 
+                x={`${x}%`} 
+                y={chartHeight - 5} 
+                textAnchor={index === 0 ? "start" : index === timeLabels.length - 1 ? "end" : "middle"}
+                fill="rgba(0,0,0,0.5)"
+                fontSize="10"
+                className="chart-label"
+              >
+                {label}
+              </text>
+            );
+          })}
         </svg>
-        
-        {/* Value labels with improved styling */}
-        <div className="absolute top-0 right-0 text-xs font-medium px-1 py-0.5 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 shadow-sm">
-          ${maxValue.toFixed(2)}
-        </div>
-        <div className="absolute bottom-0 right-0 text-xs font-medium px-1 py-0.5 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 shadow-sm">
-          ${minValue.toFixed(2)}
-        </div>
       </div>
     );
   };
@@ -1849,6 +1799,24 @@ const Finance = () => {
       </div>
     );
   };
+
+  // Add a useEffect to track NOW Average data and update it every 5 seconds
+  useEffect(() => {
+    if (stockMarket.nowAverage && stockMarket.nowAverage.valueHistory) {
+      // Update the data with current value history
+      setNowAverageChartData(stockMarket.nowAverage.valueHistory);
+      
+      // Set up a refresh timer to update the chart every 5 seconds
+      const nowAverageTimer = setInterval(() => {
+        if (stockMarket.nowAverage) {
+          setNowAverageChartData(stockMarket.nowAverage.valueHistory);
+        }
+      }, 5000);
+      
+      // Clean up the timer on unmount
+      return () => clearInterval(nowAverageTimer);
+    }
+  }, [stockMarket.nowAverage]);
 
   return (
     <div className="bg-gray-50 min-h-screen p-4">
