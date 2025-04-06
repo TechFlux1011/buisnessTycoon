@@ -813,4 +813,75 @@
 @keyframes flash-update-dark {
   0%, 100% { background-color: transparent; }
   50% { background-color: rgba(59, 130, 246, 0.15); }
+}
+
+/* Add animation for global data refresh */
+.data-refreshed {
+  animation: refresh-glow 0.8s ease-in-out;
+}
+
+@keyframes refresh-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Add a subtle pulse effect for stock charts when refreshing */
+.data-refreshed .stock-chart {
+  animation: chart-pulse 0.8s ease-in-out;
+}
+
+@keyframes chart-pulse {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+    filter: saturate(1.5);
+  }
+  100% {
+    opacity: 1;
+    filter: saturate(1);
+  }
+}
+
+/* Add styles for the net worth card and chart */
+.net-worth-chart {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.net-worth-chart polyline {
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.3s ease;
+}
+
+.net-worth-chart polygon {
+  transition: fill 0.3s ease;
+}
+
+/* Add pulse animation for the net worth value when it changes */
+@keyframes net-worth-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.net-worth-pulse {
+  animation: net-worth-pulse 0.5s ease-in-out;
 } 

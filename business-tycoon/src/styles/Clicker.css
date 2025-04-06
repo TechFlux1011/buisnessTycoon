@@ -466,32 +466,26 @@
   }
 }
 
-/* Skill Gain Indicator */
+/* Skill gain indicator */
 .skill-gain-indicator {
-  position: absolute;
-  color: #4caf50;
-  font-weight: bold;
-  font-size: 16px;
-  animation: float-up 1s forwards;
+  position: fixed;
   pointer-events: none;
-  z-index: 100;
+  color: #3bd86d;
+  font-weight: bold;
+  text-shadow: 0 0 2px rgba(0,0,0,0.5);
+  transition: all 0.75s ease-out;
+  z-index: 9999;
 }
 
-@keyframes float-up {
-  0% {
-    opacity: 0;
-    transform: translateY(0);
-  }
-  20% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-40px);
-  }
+/* Penny gain indicator */
+.penny-gain-indicator {
+  position: fixed;
+  pointer-events: none;
+  color: #f5d742;
+  font-weight: bold;
+  text-shadow: 0 0 2px rgba(0,0,0,0.5);
+  transition: all 0.75s ease-out;
+  z-index: 9999;
 }
 
 /* Ascension Prompt */

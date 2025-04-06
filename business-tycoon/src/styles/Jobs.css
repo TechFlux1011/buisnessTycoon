@@ -181,6 +181,51 @@
   font-weight: 600;
 }
 
+.job-refresh-indicator {
+  font-size: 14px;
+  color: #777;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.job-refresh-indicator span {
+  display: inline-block;
+}
+
+.refresh-timer {
+  font-weight: 500;
+  color: #00acc1;
+}
+
+.refreshing-jobs {
+  animation: refresh-fade 0.3s;
+}
+
+@keyframes refresh-fade {
+  0% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.refresh-icon {
+  display: inline-flex;
+  animation: spin 1s infinite linear;
+  margin-right: 5px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .job-listings {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -396,30 +441,36 @@
 }
 
 .application-pending {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
+  width: 100%;
+  position: relative;
 }
 
 .loading-bar {
-  height: 4px;
+  height: 6px;
+  width: 100%;
   background: linear-gradient(90deg, #ffd700, #ff9800, #ffd700);
   background-size: 200% 100%;
   animation: loading-bar-animation 1.5s infinite linear;
-  border-radius: 2px;
-  margin-bottom: 8px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .pending-text {
   text-align: center;
   color: #666;
-  font-style: italic;
   font-size: 14px;
+  margin-bottom: 10px;
 }
 
 /* Action buttons */
 .job-action-buttons {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   margin-top: auto;
+  width: 100%;
 }
 
 .apply-job-button {
@@ -469,26 +520,22 @@
   background: linear-gradient(to bottom, #f44336, #e53935);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 30px;
-  font-weight: 600;
-  font-size: 15px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 400;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
-  letter-spacing: 0.5px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: auto;
+  align-self: center;
 }
 
 .cancel-application-button:hover {
   background: linear-gradient(to bottom, #e53935, #d32f2f);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transform: translateY(-2px);
-}
-
-.cancel-application-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 /* Management progression styling */

@@ -13,6 +13,8 @@ const Jobs = () => {
   const [showLevelUpMessage, setShowLevelUpMessage] = useState(false);
   const [levelUpDetails, setLevelUpDetails] = useState(null);
   const [showPromotionBanner, setShowPromotionBanner] = useState(false);
+  const [lastJobRefresh, setLastJobRefresh] = useState(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const prevLevelRef = React.useRef(1);
   const [applicationTimers, setApplicationTimers] = useState({});
   
@@ -58,13 +60,13 @@ const Jobs = () => {
       jobPool = [
         ...entryLevelJobs.poor.map(job => ({
           ...job,
-          hourlyPay: job.payPerClick * 60,
-          payPerClick: job.payPerClick
+          hourlyPay: job.hourlyPay || job.payPerClick * 60,
+          payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
         })),
         ...entryLevelJobs.rich.map(job => ({
           ...job,
-          hourlyPay: job.payPerClick * 60,
-          payPerClick: job.payPerClick
+          hourlyPay: job.hourlyPay || job.payPerClick * 60,
+          payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
         }))
       ];
     } else {
@@ -72,13 +74,13 @@ const Jobs = () => {
       jobPool = state.playerStatus.background === 'rich'
         ? [...entryLevelJobs.rich.map(job => ({
             ...job,
-            hourlyPay: job.payPerClick * 60,
-            payPerClick: job.payPerClick
+            hourlyPay: job.hourlyPay || job.payPerClick * 60,
+            payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
           }))]
         : [...entryLevelJobs.poor.map(job => ({
             ...job,
-            hourlyPay: job.payPerClick * 60,
-            payPerClick: job.payPerClick
+            hourlyPay: job.hourlyPay || job.payPerClick * 60,
+            payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
           }))];
     }
     
@@ -139,8 +141,8 @@ const Jobs = () => {
       if (qualified) {
         jobPool.push({
           ...job,
-          hourlyPay: job.payPerClick * 60,
-          payPerClick: job.payPerClick
+          hourlyPay: job.hourlyPay || job.payPerClick * 60,
+          payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
         });
       }
     });
@@ -174,8 +176,8 @@ const Jobs = () => {
         if (qualified) {
           jobPool.push({
             ...job,
-            hourlyPay: job.payPerClick * 60,
-            payPerClick: job.payPerClick
+            hourlyPay: job.hourlyPay || job.payPerClick * 60,
+            payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
           });
         }
       });
@@ -207,8 +209,8 @@ const Jobs = () => {
         if (qualified) {
           jobPool.push({
             ...job,
-            hourlyPay: job.payPerClick * 60,
-            payPerClick: job.payPerClick
+            hourlyPay: job.hourlyPay || job.payPerClick * 60,
+            payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
           });
         }
       });
@@ -242,11 +244,78 @@ const Jobs = () => {
         if (qualified) {
           jobPool.push({
             ...job,
-            hourlyPay: job.payPerClick * 60,
-            payPerClick: job.payPerClick
+            hourlyPay: job.hourlyPay || job.payPerClick * 60,
+            payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
           });
         }
       });
+    }
+    
+    // ALWAYS ensure there's at least one job in the pool
+    if (jobPool.length === 0) {
+      // Find entry-level jobs that match player's skills
+      const playerSkills = Object.keys(state.skills || {});
+      
+      // First try to find jobs that match player's skills from their background pool
+      const backgroundJobs = state.playerStatus.background === 'rich' 
+        ? entryLevelJobs.rich 
+        : entryLevelJobs.poor;
+      
+      // Find jobs matching player skills
+      let matchingJobs = backgroundJobs.filter(job => {
+        if (!job.requirements) return true; // No requirements means always a match
+        
+        // Check if the job requires any skill the player has
+        return Object.keys(job.requirements).some(skill => 
+          playerSkills.includes(skill) && state.skills[skill] >= job.requirements[skill]
+        );
+      });
+      
+      // If no matching jobs from background, check both pools
+      if (matchingJobs.length === 0) {
+        const allEntryJobs = [...entryLevelJobs.poor, ...entryLevelJobs.rich];
+        matchingJobs = allEntryJobs.filter(job => {
+          if (!job.requirements) return true;
+          
+          return Object.keys(job.requirements).some(skill => 
+            playerSkills.includes(skill) && state.skills[skill] >= job.requirements[skill]
+          );
+        });
+      }
+      
+      // If we found matching jobs, add one to the pool
+      if (matchingJobs.length > 0) {
+        // Add a random matching job
+        const randomJob = matchingJobs[Math.floor(Math.random() * matchingJobs.length)];
+        jobPool.push({
+          ...randomJob,
+          hourlyPay: randomJob.hourlyPay || randomJob.payPerClick * 60,
+          payPerClick: randomJob.hourlyPay ? randomJob.hourlyPay / 60 : randomJob.payPerClick
+        });
+      } else {
+        // If somehow no matching jobs were found, add a fallback entry job based on background
+        const fallbackJob = state.playerStatus.background === 'rich' 
+          ? {
+              id: 'intern-fallback',
+              title: 'Corporate Intern',
+              hourlyPay: 19.80,
+              payPerClick: 19.80 / 60,
+              category: 'management',
+              description: 'Getting coffee and making copies - always available entry position',
+              requirements: {}
+            }
+          : {
+              id: 'fastfood-fallback',
+              title: 'Fast Food Worker',
+              hourlyPay: 15,
+              payPerClick: 15 / 60,
+              category: 'food',
+              description: 'Flipping burgers for minimum wage - always available entry position',
+              requirements: {}
+            };
+            
+        jobPool.push(fallbackJob);
+      }
     }
     
     // If the player doesn't have 3 jobs to choose from, add some random ones
@@ -257,8 +326,8 @@ const Jobs = () => {
           if (!jobPool.some(j => j.id === job.id)) {
             jobPool.push({
               ...job,
-              hourlyPay: job.payPerClick * 60,
-              payPerClick: job.payPerClick
+              hourlyPay: job.hourlyPay || job.payPerClick * 60,
+              payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
             });
           }
         });
@@ -268,8 +337,8 @@ const Jobs = () => {
           if (!jobPool.some(j => j.id === job.id)) {
             jobPool.push({
               ...job,
-              hourlyPay: job.payPerClick * 60,
-              payPerClick: job.payPerClick
+              hourlyPay: job.hourlyPay || job.payPerClick * 60,
+              payPerClick: job.hourlyPay ? job.hourlyPay / 60 : job.payPerClick
             });
           }
         });
@@ -288,6 +357,11 @@ const Jobs = () => {
           ...job,
           hourlyPay: job.payPerClick * 60
         };
+      } else if (job.hourlyPay && !job.payPerClick) {
+        return {
+          ...job,
+          payPerClick: job.hourlyPay / 60
+        };
       }
       return job;
     });
@@ -299,7 +373,27 @@ const Jobs = () => {
     // Generate available jobs when the component mounts or when skills change
     const jobs = generateAvailableJobs();
     setAvailableJobs(jobs);
+    setLastJobRefresh(Date.now());
   }, [generateAvailableJobs]); 
+  
+  // Add job refresh timer - refresh every 30 seconds
+  useEffect(() => {
+    const jobRefreshInterval = setInterval(() => {
+      // Generate new job listings
+      setIsRefreshing(true);
+      const jobs = generateAvailableJobs();
+      setAvailableJobs(jobs);
+      setLastJobRefresh(Date.now());
+      
+      // Reset refreshing status after a short delay to allow for animation
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }, 30000); // 30 seconds
+    
+    // Clean up interval on unmount
+    return () => clearInterval(jobRefreshInterval);
+  }, [generateAvailableJobs]);
   
   const applyForJob = (job) => {
     // If there's already a pending application, don't allow another one
@@ -656,6 +750,43 @@ const Jobs = () => {
     applyForJob(job);
   };
   
+  // Add a formatted time remaining function
+  const getRefreshTimeRemaining = () => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastJobRefresh;
+    const timeRemaining = Math.max(0, 30000 - timeSinceLastRefresh);
+    
+    // Format as seconds
+    return Math.ceil(timeRemaining / 1000);
+  };
+  
+  // Manually refresh job listings
+  const handleManualRefresh = () => {
+    // Don't allow refresh if already refreshing or if less than 5 seconds since last refresh
+    if (isRefreshing || (Date.now() - lastJobRefresh) < 5000) return;
+    
+    setIsRefreshing(true);
+    const jobs = generateAvailableJobs();
+    setAvailableJobs(jobs);
+    setLastJobRefresh(Date.now());
+    
+    // Reset refreshing status after a short delay
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 300);
+  };
+  
+  // Add a timer to update the display of seconds remaining
+  const [refreshTimer, setRefreshTimer] = useState(30);
+  
+  useEffect(() => {
+    const timerInterval = setInterval(() => {
+      setRefreshTimer(getRefreshTimeRemaining());
+    }, 1000);
+    
+    return () => clearInterval(timerInterval);
+  }, [lastJobRefresh]);
+  
   return (
     <div className="jobs-container">
       <h2>Jobs & Career</h2>
@@ -856,11 +987,19 @@ const Jobs = () => {
         </div>
       )}
       
+      {/* Job listings section */}
       <div className="section-header">
         <h3>Available Jobs</h3>
+        <div className="job-refresh-indicator" onClick={handleManualRefresh} style={{ cursor: 'pointer' }}>
+          {isRefreshing ? (
+            <span className="refresh-icon">⟳</span>
+          ) : (
+            <span>Refreshing in <span className="refresh-timer">{refreshTimer}</span>s</span>
+          )}
+        </div>
       </div>
       
-      <div className="job-listings">
+      <div className={`job-listings ${isRefreshing ? 'refreshing-jobs' : ''}`}>
         {availableJobs.length > 0 ? (
           availableJobs.map((job, index) => {
             const isPending = pendingJob === job.id;
@@ -924,16 +1063,16 @@ const Jobs = () => {
                       <div className="application-pending">
                         <div className="loading-bar"></div>
                         <div className="pending-text">Application in progress...</div>
+                        <button 
+                          className="cancel-application-button" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelApplication(job.id);
+                          }}
+                        >
+                          Cancel Application
+                        </button>
                       </div>
-                      <button 
-                        className="cancel-application-button" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cancelApplication(job.id);
-                        }}
-                      >
-                        Cancel Application
-                      </button>
                     </>
                   ) : (
                     <button 

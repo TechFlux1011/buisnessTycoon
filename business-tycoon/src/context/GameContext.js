@@ -695,7 +695,8 @@ function gameReducer(state, action) {
         playerStatus: {
           ...state.playerStatus,
           background: background,
-          jobExperience: 0
+          jobExperience: 0,
+          job: null // No starter job - player starts unemployed
         },
         skills: randomSkills
       };

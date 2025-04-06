@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, useRef, useCallback } from 'react';
 import { useGame } from './GameContext';
 import { 
   companies, 
@@ -37,8 +37,6 @@ const initializeStockData = () => {
     lastRecordedPrice: company.basePrice,
     priceDirection: 'neutral',
     priceChangeTime: Date.now(),
-    bets: { up: 0, down: 0 },
-    betHistory: [],
     // Supply/demand factors
     buyPressure: 0,
     sellPressure: 0,
@@ -432,67 +430,94 @@ const stockMarketReducer = (state, action) => {
         lastPriceRecordTime: action.payload.timestamp
       };
 
-    case 'PLACE_PRICE_DIRECTION_BET': {
-      const { stockId, amount, direction } = action.payload;
+    case 'REFRESH_PRICES':
+      // Force a refresh of price data by both recording and updating prices
+      const refreshTimestamp = Date.now();
       
-      // Find the company
-      const company = state.companies.find(company => company.id === stockId);
-      if (!company) return state;
+      // Generate new prices using similar logic as the market tick
+      const marketSentiment = state.marketMood;
+      const refreshedCompanies = state.companies.map(company => {
+        // Calculate a random price change based on company volatility and market conditions
+        const volatility = company.volatility || 0.02;
+        const marketFactor = marketSentiment === 'bullish' ? 0.3 : 
+                            marketSentiment === 'bearish' ? -0.3 : 0;
+        
+        // Random price fluctuation based on volatility
+        const randomFactor = (Math.random() - 0.5) * volatility * 2;
+        
+        // Company-specific trend factor (supply/demand)
+        const supplyDemandFactor = (company.buyPressure - company.sellPressure) * 0.01;
+        
+        // Combined factors for price change
+        const changePercent = randomFactor + marketFactor * volatility + supplyDemandFactor;
+        
+        // Calculate new price
+        const newPrice = Math.max(0.01, company.currentPrice * (1 + changePercent));
+        
+        // Calculate direction compared to last recorded price
+        const priceDirection = newPrice > company.lastRecordedPrice 
+          ? 'up' 
+          : newPrice < company.lastRecordedPrice 
+            ? 'down' 
+            : 'neutral';
+        
+        // Create updated company object
+        return {
+          ...company,
+          previousPrice: company.currentPrice,
+          currentPrice: newPrice,
+          lastRecordedPrice: newPrice,
+          priceHistory: [...company.priceHistory, newPrice].slice(-50),
+          percentChange: ((newPrice / company.previousPrice) - 1) * 100,
+          trending: priceDirection,
+          priceDirection,
+          priceChangeTime: refreshTimestamp,
+          // Gradually decay buy/sell pressure
+          buyPressure: company.buyPressure * 0.95,
+          sellPressure: company.sellPressure * 0.95
+        };
+      });
       
-      // Update company's bet counts
-      const updatedCompany = {
-        ...company,
-        bets: {
-          ...company.bets || {},
-          [direction]: ((company.bets && company.bets[direction]) || 0) + 1
-        },
-        // Add pressure in the bet direction (small impact)
-        buyPressure: direction === 'up' 
-          ? Math.min(1, (company.buyPressure || 0) + 0.02)
-          : company.buyPressure || 0,
-        sellPressure: direction === 'down'
-          ? Math.min(1, (company.sellPressure || 0) + 0.02)
-          : company.sellPressure || 0,
+      // Calculate new NOW Average value
+      const newAverageValue = calculateNOWAverage(refreshedCompanies);
+      
+      // Preserve the structure of nowAverage object but update values
+      const previousValue = state.nowAverage.currentValue;
+      
+      // Calculate percent change
+      const avgPercentChange = ((newAverageValue / previousValue) - 1) * 100;
+      
+      // Determine trend
+      let avgTrending = 'neutral';
+      if (avgPercentChange > 0.05) avgTrending = 'up';
+      else if (avgPercentChange < -0.05) avgTrending = 'down';
+      
+      // Create updated NOW Average object with proper structure
+      const updatedNowAverage = {
+        ...state.nowAverage,
+        previousValue: previousValue,
+        currentValue: newAverageValue,
+        valueHistory: [...state.nowAverage.valueHistory, newAverageValue].slice(-50),
+        percentChange: avgPercentChange,
+        trending: avgTrending,
+        description: getMarketStatusMessage(avgPercentChange)
       };
-      
-      // Update the companies array
-      const companiesWithBets = state.companies.map(c => 
-        c.id === stockId ? updatedCompany : c
-      );
       
       return {
         ...state,
-        companies: companiesWithBets
+        companies: refreshedCompanies,
+        nowAverage: updatedNowAverage,
+        lastPriceRecordTime: refreshTimestamp,
+        lastUpdate: new Date().toLocaleTimeString()
       };
-    }
 
-    case 'RESOLVE_PRICE_BETS':
-      const { resolvedCompanyId, winDirection } = action.payload;
+    case 'INTERNAL_CLOCK_UPDATE':
       return {
         ...state,
-        companies: state.companies.map(company => {
-          if (company.id === resolvedCompanyId) {
-            // Mark bets as resolved and set win/loss status
-            const resolvedBets = company.betHistory.map(bet => {
-              if (!bet.resolved) {
-                return {
-                  ...bet,
-                  resolved: true,
-                  won: bet.direction === winDirection
-                };
-              }
-              return bet;
-            });
-            
-            // Reset betting counters
-            return {
-              ...company,
-              betHistory: resolvedBets,
-              bets: { up: 0, down: 0 }
-            };
-          }
-          return company;
-        })
+        companies: action.payload.companies,
+        nowAverage: action.payload.nowAverage,
+        lastPriceRecordTime: action.payload.timestamp,
+        lastUpdate: new Date().toLocaleTimeString()
       };
 
     default:
@@ -511,90 +536,12 @@ export const StockMarketProvider = ({ children }) => {
   const [timer, setTimer] = useState(null);
   // Add ref to track last price record time
   const lastPriceRecordRef = useRef(Date.now());
-  const thirtySecInterval = useRef(null);
+  const priceUpdateInterval = useRef(null);
+  // Add ref for tracking the internal clock
+  const internalClockRef = useRef(null);
+  const [clockTick, setClockTick] = useState(0);
 
-  // Separate function to record price changes every 30 seconds
-  const recordPriceChanges = () => {
-    if (!stockMarket.marketOpen) return;
-    
-    const now = Date.now();
-    const updatedCompanies = stockMarket.companies.map(company => {
-      // Calculate direction compared to last recorded price
-      const priceDirection = company.currentPrice > company.lastRecordedPrice 
-        ? 'up' 
-        : company.currentPrice < company.lastRecordedPrice 
-          ? 'down' 
-          : 'neutral';
-          
-      // Return updated company
-      return {
-        ...company,
-        lastRecordedPrice: company.currentPrice,
-        priceDirection,
-        priceChangeTime: now
-      };
-    });
-    
-    // Resolve any outstanding price direction bets
-    updatedCompanies.forEach(company => {
-      if (company.bets.up > 0 || company.bets.down > 0) {
-        // Determine winning direction
-        const winDirection = company.priceDirection === 'neutral' 
-          ? null 
-          : company.priceDirection;
-        
-        if (winDirection) {
-          // Resolve bets
-          dispatch({
-            type: 'RESOLVE_PRICE_BETS',
-            payload: {
-              resolvedCompanyId: company.id,
-              winDirection
-            }
-          });
-          
-          // Payout winning bets
-          const winnings = winDirection === 'up' ? company.bets.up * 1.8 : company.bets.down * 1.8;
-          
-          // Add winnings to game money
-          if (winnings > 0) {
-            gameDispatch({
-              type: 'ADD_MONEY',
-              payload: winnings
-            });
-            
-            // Add news item about winnings
-            dispatch({
-              type: 'ADD_NEWS',
-              payload: {
-                id: Date.now(),
-                headline: `You won $${winnings.toFixed(2)} from ${company.name} price direction bet`,
-                content: `Your bet that ${company.name} would go ${winDirection} was correct!`,
-                impact: 'positive',
-                timestamp: new Date().toISOString(),
-                companyId: company.id,
-                isPersonal: true
-              }
-            });
-          }
-        }
-      }
-    });
-    
-    // Dispatch record price changes action
-    dispatch({
-      type: 'RECORD_PRICE_CHANGES',
-      payload: {
-        companies: updatedCompanies,
-        timestamp: now
-      }
-    });
-    
-    // Update ref for next check
-    lastPriceRecordRef.current = now;
-  };
-
-  // Modify the updateStockPrices function to include supply/demand effects
+  // Modify the updateStockPrices function to enhance buy/sell pressure impact
   const updateStockPrices = () => {
     dispatch({ type: 'UPDATE_PRICES_START' });
     
@@ -610,7 +557,7 @@ export const StockMarketProvider = ({ children }) => {
     
     // Combine market sentiment with momentum (weighted towards new sentiment)
     const marketTrendFactor = (marketSentiment * 0.7) + (marketMomentum * 0.3);
-    
+
     // Determine if news event should happen (5% chance)
     const newsEvent = Math.random() < 0.05 ? 
       marketNewsEvents[Math.floor(Math.random() * marketNewsEvents.length)] : null;
@@ -628,13 +575,13 @@ export const StockMarketProvider = ({ children }) => {
       // Apply news event if it affects this sector
       if (newsEvent && newsEvent.sectors.includes(sector)) {
         const impactDirection = newsEvent.impact === 'positive' ? 1 : 
-                               newsEvent.impact === 'negative' ? -1 : 
-                               Math.random() > 0.5 ? 1 : -1;
+                              newsEvent.impact === 'negative' ? -1 : 
+                              Math.random() > 0.5 ? 1 : -1;
         sectorImpacts[sector] += impactDirection * newsEvent.magnitude;
       }
     });
-      
-    // Update each company's stock price
+
+    // Update each company's stock price with enhanced buy/sell pressure impact
     const updatedCompanies = stockMarket.companies.map(company => {
       // Start with the sector impact for this company
       let priceChange = sectorImpacts[company.sector] || 0;
@@ -651,13 +598,13 @@ export const StockMarketProvider = ({ children }) => {
       // Clamp price trend to reasonable range
       priceTrend = Math.max(-0.5, Math.min(0.5, priceTrend));
       
-      // Apply supply and demand pressure to price change
-      const supplyDemandFactor = (company.buyPressure - company.sellPressure) * 0.1;
+      // Enhanced buy/sell pressure impact (increase the influence by 50%)
+      const supplyDemandFactor = (company.buyPressure - company.sellPressure) * 0.15; // Increased from 0.1
       priceChange += supplyDemandFactor;
       
       // Apply more weight to the established trend for continuity
-      priceChange = (priceChange * 0.6) + (priceTrend * 0.4);
-      
+      priceChange = (priceChange * 0.5) + (priceTrend * 0.3) + (supplyDemandFactor * 0.2); // More influence from supply/demand
+
       // Apply company-specific random news (1% chance per company)
       if (Math.random() < 0.01 && company.news && company.news.length > 0) {
         const randomNews = company.news[Math.floor(Math.random() * company.news.length)];
@@ -745,7 +692,7 @@ export const StockMarketProvider = ({ children }) => {
         if (playerShares > 0) {
           const dividendAmount = playerShares * company.events.dividend.amount;
           gameDispatch({
-            type: 'ADD_MONEY',
+            type: 'UPDATE_MONEY',
             payload: dividendAmount
           });
           
@@ -798,7 +745,7 @@ export const StockMarketProvider = ({ children }) => {
       const newWeekHigh = Math.max(company.weekHigh, safePriceValue);
       const newWeekLow = Math.min(company.weekLow, safePriceValue);
       
-      // Record price in history (limited to last 60 points, one per 30 seconds = 30 minutes of data)
+      // Record price in history (limited to last 60 points, one per 5 seconds = 5 minutes of data)
       const updatedPriceHistory = [...(company.priceHistory || []), safePriceValue];
       const limitedPriceHistory = updatedPriceHistory.slice(-60);
       
@@ -871,15 +818,18 @@ export const StockMarketProvider = ({ children }) => {
     if (nowPercentChange > 0.08) nowTrending = 'up';
     else if (nowPercentChange < -0.08) nowTrending = 'down';
     
-    // Update NOW Average history
-    const updatedNOWHistory = [...stockMarket.nowAverage.valueHistory, nowAverageValue].slice(-50);
+    // Update NOW Average history - ensure we're keeping at least 60 points for the chart
+    const updatedNOWHistory = [...stockMarket.nowAverage.valueHistory, nowAverageValue];
+    // Only keep the last 60 points to match the stock charts
+    const limitedNOWHistory = updatedNOWHistory.length > 60 ? 
+      updatedNOWHistory.slice(-60) : updatedNOWHistory;
     
     // Create updated NOW Average object
     const updatedNOWAverage = {
       ...stockMarket.nowAverage,
       previousValue: previousNOWAverage,
       currentValue: nowAverageValue,
-      valueHistory: updatedNOWHistory,
+      valueHistory: limitedNOWHistory,
       percentChange: nowPercentChange,
       trending: nowTrending,
       description: getMarketStatusMessage(nowPercentChange)
@@ -964,9 +914,9 @@ export const StockMarketProvider = ({ children }) => {
       }
     });
     
-    // Check if we need to record the 30-second price snapshot
+    // Check if we need to record the 5-second price snapshot
     const now = Date.now();
-    if (now - lastPriceRecordRef.current >= 30000) {
+    if (now - lastPriceRecordRef.current >= 5000) {
       recordPriceChanges();
     }
     
@@ -1009,18 +959,18 @@ export const StockMarketProvider = ({ children }) => {
     });
   };
   
-  // Set up 30-second interval for price recording
+  // Set up 5-second interval for price recording
   useEffect(() => {
-    // Set up 30-second interval
-    thirtySecInterval.current = setInterval(() => {
+    // Set up 5-second interval
+    priceUpdateInterval.current = setInterval(() => {
       if (stockMarket.marketOpen) {
         recordPriceChanges();
       }
-    }, 30000);
+    }, 5000);
     
     return () => {
-      if (thirtySecInterval.current) {
-        clearInterval(thirtySecInterval.current);
+      if (priceUpdateInterval.current) {
+        clearInterval(priceUpdateInterval.current);
       }
     };
   }, []);
@@ -1058,10 +1008,10 @@ export const StockMarketProvider = ({ children }) => {
       return { success: false, message: "Insufficient funds" };
     }
     
-    // Reduce player's money
+    // Reduce player's money - use negative value with UPDATE_MONEY
     gameDispatch({
-      type: 'SPEND_MONEY',
-      payload: total
+      type: 'UPDATE_MONEY',
+      payload: -total
     });
     
     // Dispatch the buy action
@@ -1088,16 +1038,18 @@ export const StockMarketProvider = ({ children }) => {
       throw new Error('Cannot sell zero or negative shares');
     }
     
-    if (company.owned < shares) {
-      throw new Error(`You only own ${company.owned} shares of ${company.name}`);
+    // Check ownership from playerOwnedStocks instead of company.owned
+    const ownedStock = stockMarket.playerOwnedStocks.find(s => s.stockId === stockId);
+    if (!ownedStock || ownedStock.shares < shares) {
+      throw new Error(`You only own ${ownedStock ? ownedStock.shares : 0} shares of ${company.name}`);
     }
     
     const price = company.currentPrice;
     const total = price * shares;
     
-    // Add money to player's account
+    // Add money to player's account - use positive value with UPDATE_MONEY
     gameDispatch({
-      type: 'ADD_MONEY',
+      type: 'UPDATE_MONEY',
       payload: total
     });
     
@@ -1204,68 +1156,150 @@ export const StockMarketProvider = ({ children }) => {
     return () => clearInterval(intervalId);
   }, [stockMarket.companies?.length]);
   
-  // Add new function to place a price direction bet
-  const placePriceDirectionBet = (stockId, direction, amount) => {
-    if (amount <= 0) {
-      return { success: false, message: "Bet amount must be positive" };
-    }
+  // Add a new function for the internal clock that runs every 5 seconds
+  const runInternalClock = useCallback(() => {
+    // Increment the clock tick
+    setClockTick(prev => prev + 1);
     
-    if (direction !== 'up' && direction !== 'down') {
-      return { success: false, message: "Direction must be 'up' or 'down'" };
+    if (stockMarket.marketOpen) {
+      // Trigger price updates based on buy/sell pressure
+      const timestamp = Date.now();
+      
+      // Update each company with changes based on current buy/sell pressure
+      const clockUpdatedCompanies = stockMarket.companies.map(company => {
+        // Calculate price change based on current buy/sell pressure
+        const buyPressure = company.buyPressure || 0;
+        const sellPressure = company.sellPressure || 0;
+        
+        // Net pressure determines direction (buy pressure = up, sell pressure = down)
+        const netPressure = buyPressure - sellPressure;
+        
+        // Calculate price change - more significant impact from pressure
+        const pressureImpact = netPressure * 0.012; // More direct impact
+        
+        // Apply small random noise for realistic movement
+        const noiseLevel = company.volatility || 0.01;
+        const randomNoise = (Math.random() * 2 - 1) * noiseLevel * 0.5;
+        
+        // Calculate new price with pressure being primary driver and some randomness
+        const priceChange = (pressureImpact * 0.7) + (randomNoise * 0.3);
+        const newPrice = Math.max(0.01, company.currentPrice * (1 + priceChange));
+        
+        // Determine price direction
+        const priceDirection = newPrice > company.currentPrice ? 'up' : 
+                              newPrice < company.currentPrice ? 'down' : 'neutral';
+        
+        // Create updated company
+        return {
+          ...company,
+          previousPrice: company.currentPrice,
+          currentPrice: newPrice,
+          lastRecordedPrice: newPrice,
+          priceHistory: [...company.priceHistory, newPrice].slice(-50),
+          percentChange: ((newPrice / company.previousPrice) - 1) * 100,
+          trending: priceDirection,
+          priceDirection,
+          priceChangeTime: timestamp,
+          // Gradually decay pressure over time
+          buyPressure: company.buyPressure * 0.98,  
+          sellPressure: company.sellPressure * 0.98
+        };
+      });
+      
+      // Calculate updated NOW Average
+      const newAvgValue = calculateNOWAverage(clockUpdatedCompanies);
+      const prevAvgValue = stockMarket.nowAverage.currentValue;
+      const avgPercentChange = ((newAvgValue / prevAvgValue) - 1) * 100;
+      
+      // Determine trend
+      let avgTrending = 'neutral';
+      if (avgPercentChange > 0.05) avgTrending = 'up';
+      else if (avgPercentChange < -0.05) avgTrending = 'down';
+      
+      // Create updated NOW Average
+      const updatedAverage = {
+        ...stockMarket.nowAverage,
+        previousValue: prevAvgValue,
+        currentValue: newAvgValue,
+        valueHistory: [...stockMarket.nowAverage.valueHistory, newAvgValue].slice(-50),
+        percentChange: avgPercentChange,
+        trending: avgTrending,
+        description: getMarketStatusMessage(avgPercentChange)
+      };
+      
+      // Dispatch a clock tick update
+      dispatch({
+        type: 'INTERNAL_CLOCK_UPDATE',
+        payload: {
+          companies: clockUpdatedCompanies,
+          nowAverage: updatedAverage,
+          timestamp: timestamp,
+          clockTick: clockTick
+        }
+      });
     }
+  }, [stockMarket.companies, stockMarket.marketOpen, stockMarket.nowAverage, clockTick]);
+
+  // Set up the internal clock interval
+  useEffect(() => {
+    // Create a 5-second interval for the internal clock
+    internalClockRef.current = setInterval(() => {
+      runInternalClock();
+    }, 5000);
     
-    const company = stockMarket.companies.find(c => c.id === stockId);
-    if (!company) {
-      return { success: false, message: "Invalid stock selected" };
-    }
+    // Clean up on unmount
+    return () => {
+      if (internalClockRef.current) {
+        clearInterval(internalClockRef.current);
+      }
+    };
+  }, [runInternalClock]);
+  
+  // Restore the recordPriceChanges function
+  // Separate function to record price changes every 5 seconds
+  const recordPriceChanges = () => {
+    if (!stockMarket.marketOpen) return;
     
-    // Check if player has enough money
-    if (gameState.money < amount) {
-      return { success: false, message: "Insufficient funds for this bet" };
-    }
-    
-    // Reduce player's money
-    gameDispatch({
-      type: 'SPEND_MONEY',
-      payload: amount
+    const now = Date.now();
+    const updatedCompanies = stockMarket.companies.map(company => {
+      // Calculate direction compared to last recorded price
+      const priceDirection = company.currentPrice > company.lastRecordedPrice 
+        ? 'up' 
+        : company.currentPrice < company.lastRecordedPrice 
+          ? 'down' 
+          : 'neutral';
+          
+      // Return updated company
+      return {
+        ...company,
+        lastRecordedPrice: company.currentPrice,
+        priceDirection,
+        priceChangeTime: now
+      };
     });
     
-    // Dispatch bet placement
-    const betId = Date.now();
+    // Dispatch record price changes action
     dispatch({
-      type: 'PLACE_PRICE_DIRECTION_BET',
-      payload: { stockId, direction, amount, betId }
-    });
-    
-    // Add news about bet
-    dispatch({
-      type: 'ADD_NEWS',
+      type: 'RECORD_PRICE_CHANGES',
       payload: {
-        id: Date.now(),
-        headline: `You placed a $${amount.toFixed(2)} bet that ${company.name} will go ${direction}`,
-        content: `Bet placed at $${company.currentPrice.toFixed(2)}. Result will be determined in 30 seconds.`,
-        impact: 'neutral',
-        timestamp: new Date().toISOString(),
-        companyId: company.id,
-        isPersonal: true
+        companies: updatedCompanies,
+        timestamp: now
       }
     });
     
-    return { 
-      success: true, 
-      message: `Successfully placed a $${amount.toFixed(2)} bet that ${company.name} will go ${direction}`,
-      betId
-    };
+    // Update ref for next check
+    lastPriceRecordRef.current = now;
   };
   
-  // Provide context value
+  // Modify the value object to include the dispatch function
   const value = {
     stockMarket,
     buyStock,
     sellStock,
     toggleWatchlist,
     takeCompanyAction,
-    placePriceDirectionBet
+    // Add dispatch so components can trigger actions directly when needed
+    dispatch
   };
   
   return (

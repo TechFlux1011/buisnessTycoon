@@ -52,6 +52,9 @@ const Clicker = () => {
       const hourlyRate = state.playerStatus.job.hourlyPay || (state.playerStatus.job.payPerClick * 60);
       // Calculate click value as 1 minute of work (hourly rate / 60)
       newClickValue = hourlyRate / 60;
+    } else {
+      // Player has no job, default to 1 penny per click
+      newClickValue = 0.01;
     }
     
     // Asset income
@@ -134,6 +137,9 @@ const Clicker = () => {
     // Show skill gain if there's a job
     if (state.playerStatus.job && state.playerStatus.job.category) {
       showSkillGain(e.clientX, e.clientY - 20);
+    } else {
+      // Show a penny gain if no job
+      showPennyGain(e.clientX, e.clientY - 20);
     }
     
     if (canAutoClick()) {
@@ -269,6 +275,30 @@ const Clicker = () => {
     setTimeout(() => {
       setSkillGainIndicator(null);
     }, 600);
+  };
+  
+  // Show a penny gain animation when clicking without a job
+  const showPennyGain = (x, y) => {
+    const indicator = document.createElement('div');
+    indicator.innerText = '+$0.01';
+    indicator.className = 'penny-gain-indicator';
+    indicator.style.left = `${x}px`;
+    indicator.style.top = `${y}px`;
+    
+    document.body.appendChild(indicator);
+    
+    // Animate upward and fade out
+    setTimeout(() => {
+      indicator.style.transform = 'translateY(-50px)';
+      indicator.style.opacity = '0';
+    }, 50);
+    
+    // Remove from DOM after animation
+    setTimeout(() => {
+      if (indicator.parentNode) {
+        indicator.parentNode.removeChild(indicator);
+      }
+    }, 1000);
   };
   
   // Add an effect to check for promotion readiness
