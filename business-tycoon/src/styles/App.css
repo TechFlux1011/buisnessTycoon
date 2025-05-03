@@ -749,4 +749,65 @@
     width: 2.5rem;
     height: 2.5rem;
   }
+}
+
+/* Auth Styling */
+.auth-page-container {
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+}
+
+.auth-form-container {
+  width: 100%;
+}
+
+/* Profile Modal */
+.profile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.profile-modal {
+  width: 90%;
+  max-width: 500px;
+  z-index: 1001;
+}
+
+.header-container {
+  width: 100%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.profile-button {
+  padding: 6px 10px;
+  border-radius: 20px;
+  transition: background-color 0.2s;
+}
+
+.profile-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Dark theme adjustments */
+.dark-theme .profile-container {
+  background-color: #2d3748;
+  color: #f7fafc;
+}
+
+.dark-theme .profile-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme .auth-container {
+  background-color: #2d3748;
+  color: #f7fafc;
 } 

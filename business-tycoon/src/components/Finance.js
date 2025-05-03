@@ -5,10 +5,10 @@ import { formatCurrency } from '../data/stockMarketData';
 import '../styles/Finance.css';
 
 const Finance = () => {
-  const { stockMarket, buyStock, sellStock, toggleWatchlist, dispatch } = useStockMarket();
-  const { state, dispatch: gameDispatch } = useGame();
-  const { money } = state;
+  const { stockMarket, buyStock, sellStock, toggleWatchlist, dispatch: stockMarketDispatch } = useStockMarket();
+  const { gameState, gameDispatch } = useGame();
   
+  // Move all hooks to the top BEFORE any conditional returns
   // Add state for net worth tracking
   const [netWorth, setNetWorth] = useState(0);
   const [netWorthHistory, setNetWorthHistory] = useState([]);
@@ -19,7 +19,6 @@ const Finance = () => {
   const [tradeAction, setTradeAction] = useState('buy');
   const [shareCount, setShareCount] = useState(0);
   const [priceMovementHistory, setPriceMovementHistory] = useState({});
-  const [nowAverageChartData, setNowAverageChartData] = useState([]);
   const [chartHoverData, setChartHoverData] = useState(null);
   const [detailedChartHoverData, setDetailedChartHoverData] = useState(null);
   
@@ -65,16 +64,9 @@ const Finance = () => {
   const modalRefreshTimer = useRef(null);
   
   const sectors = useMemo(() => {
+    if (!stockMarket.companies) return ['all'];
     const uniqueSectors = new Set(stockMarket.companies.map(company => company.sector));
     return ['all', ...Array.from(uniqueSectors)];
-  }, [stockMarket.companies]);
-  
-  // Extract unique sectors for filter dropdown
-  useEffect(() => {
-    if (stockMarket.companies) {
-      const sectors = [...new Set(stockMarket.companies.map(company => company.sector))];
-      setAvailableSectors(sectors);
-    }
   }, [stockMarket.companies]);
   
   // Reset trade quantity when selected stock changes
@@ -110,6 +102,127 @@ const Finance = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showTradeModal]);
+  
+  // Window resize handler for charts
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+  
+  // Effect for modal refresh timer
+  useEffect(() => {
+    if (selectedStock && showTradeModal) {
+      // Set up refresh timer for modal data
+      modalRefreshTimer.current = setInterval(() => {
+        setLastModalRefresh(Date.now());
+        setModalRefreshCount(prev => prev + 1);
+        
+        // Show brief animation
+        setShowRefreshAnimation(true);
+        setTimeout(() => {
+          setShowRefreshAnimation(false);
+        }, 500);
+        
+      }, 30000); // Refresh every 30 seconds
+      
+      return () => {
+        if (modalRefreshTimer.current) {
+          clearInterval(modalRefreshTimer.current);
+        }
+      };
+    }
+  }, [selectedStock, showTradeModal]);
+  
+  // Effect to update modal chart data when stock is selected or changes
+  useEffect(() => {
+    if (selectedStock && selectedStock.id !== lastSelectedStockId) {
+      updateModalChartData(selectedStock);
+      setLastSelectedStockId(selectedStock.id);
+    }
+  }, [selectedStock, lastSelectedStockId]);
+  
+  // Effect to update net worth calculations
+  useEffect(() => {
+    if (!gameState) return;
+    
+    // Only update every minute to avoid excessive calculations
+    const now = Date.now();
+    if (now - lastNetWorthUpdate < 60000) return;
+    
+    // Calculate current portfolio value
+    const portfolioValue = stockMarket.playerOwnedStocks.reduce((total, holding) => {
+      const stock = stockMarket.companies.find(c => c.id === holding.stockId);
+      if (stock) {
+        return total + (stock.currentPrice * holding.shares);
+      }
+      return total;
+    }, 0);
+    
+    // Total net worth = cash + portfolio
+    const totalNetWorth = gameState.money + portfolioValue;
+    setNetWorth(totalNetWorth);
+    
+    // Track net worth history for chart
+    setNetWorthHistory(prev => {
+      // Limit history to 100 points to avoid performance issues
+      const newHistory = [...prev, { timestamp: now, value: totalNetWorth }];
+      if (newHistory.length > 100) {
+        return newHistory.slice(-100);
+      }
+      return newHistory;
+    });
+    
+    setLastNetWorthUpdate(now);
+  }, [stockMarket, gameState, lastNetWorthUpdate]);
+  
+  // Global price refresh timer
+  useEffect(() => {
+    const autoRefreshTimer = setInterval(() => {
+      // Only refresh if it's been more than 5 minutes
+      if (Date.now() - lastGlobalRefresh > 300000) {
+        setIsGlobalRefreshing(true);
+        stockMarketDispatch({ type: 'REFRESH_PRICES' });
+        setLastGlobalRefresh(Date.now());
+        
+        // Reset refreshing status after a delay
+        setTimeout(() => {
+          setIsGlobalRefreshing(false);
+        }, 1000);
+      }
+    }, 60000); // Check every minute
+    
+    return () => {
+      clearInterval(autoRefreshTimer);
+    };
+  }, [lastGlobalRefresh, stockMarketDispatch]);
+  
+  // Calculate time until next refresh
+  const getTimeUntilNextGlobalRefresh = useCallback(() => {
+    if (!lastGlobalRefresh) return '5:00';
+    
+    const elapsedMs = Date.now() - lastGlobalRefresh;
+    const remainingMs = Math.max(0, 300000 - elapsedMs); // 5 minutes (300000ms)
+    
+    const minutes = Math.floor(remainingMs / 60000);
+    const seconds = Math.floor((remainingMs % 60000) / 1000);
+    
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  }, [lastGlobalRefresh]);
+  
+  // Early return with loading message if gameState is undefined
+  if (!gameState) {
+    return <div className="loading-container">Loading game data...</div>;
+  }
+  
+  // Use gameState instead of state throughout the component
+  const state = gameState;
+  const { money } = state;
   
   // Sort function
   const handleSort = (key) => {
@@ -175,196 +288,6 @@ const Finance = () => {
             ))}
           </div>
         </div>
-      </div>
-    );
-  };
-  
-  // Render NOW Average display
-  const renderNOWAverage = () => {
-    const { nowAverage } = stockMarket;
-    
-    // Ensure we have data and all required properties exist
-    if (!nowAverage || typeof nowAverage.currentValue === 'undefined' || 
-        typeof nowAverage.percentChange === 'undefined' || !nowAverage.trending) {
-      return (
-        <div className="now-average-container bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 mb-6 border-2 border-blue-100 dark:border-blue-900">
-          <div className="flex justify-center items-center h-20">
-            <p className="text-gray-500">Loading market data...</p>
-          </div>
-        </div>
-      );
-    }
-    
-    // Format values safely
-    const formattedCurrentValue = typeof nowAverage.currentValue === 'number' 
-      ? nowAverage.currentValue.toFixed(2) 
-      : '0.00';
-    
-    const formattedPercentChange = typeof nowAverage.percentChange === 'number'
-      ? (nowAverage.percentChange >= 0 ? '+' : '') + nowAverage.percentChange.toFixed(2)
-      : '0.00';
-    
-    // Determine if market is up or down
-    const isUp = nowAverage.percentChange >= 0;
-    
-    return (
-      <div className="now-average-container bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden mb-6">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
-                NOW Average
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Market Index
-              </p>
-            </div>
-            
-            <div className="flex flex-col items-end">
-              <div className="text-3xl font-bold text-gray-800 dark:text-white">
-                ${formattedCurrentValue}
-              </div>
-              <div className={`flex items-center ${isUp ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                <span className="text-sm font-medium">
-                  {formattedPercentChange}%
-                </span>
-                {isUp ? (
-                  <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                  </svg>
-                ) : (
-                  <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="h-40">
-          {renderNOWAverageChart()}
-        </div>
-      </div>
-    );
-  };
-  
-  // Update the renderNOWAverageChart function to make it look like a standard stock chart
-  const renderNOWAverageChart = () => {
-    if (!stockMarket.nowAverage || !stockMarket.nowAverage.valueHistory || stockMarket.nowAverage.valueHistory.length === 0) {
-      return <div className="flex items-center justify-center h-full">Loading chart data...</div>;
-    }
-    
-    // Use the entire price history for the day
-    const valueHistory = stockMarket.nowAverage.valueHistory;
-    
-    // Determine if the market is up or down for the day
-    const marketUp = valueHistory[valueHistory.length - 1] >= valueHistory[0];
-    const lineColor = marketUp ? '#22c55e' : '#ef4444';
-    const fillColor = marketUp ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-    
-    // Ensure we have at least 2 data points for the chart
-    if (valueHistory.length < 2) {
-      return <div className="flex items-center justify-center h-full">Collecting market data...</div>;
-    }
-    
-    // Chart dimensions
-    const chartHeight = 160;
-    const chartWidth = '100%';
-    
-    // Find min and max for scaling with some padding
-    const minValue = Math.min(...valueHistory) * 0.995;
-    const maxValue = Math.max(...valueHistory) * 1.005;
-    const valueRange = maxValue - minValue || 1; // Prevent division by zero
-    
-    // Create SVG path
-    const pathData = valueHistory.map((value, index) => {
-      const x = (index / (valueHistory.length - 1)) * 100;
-      const y = chartHeight - ((value - minValue) / valueRange) * chartHeight;
-      return `${index === 0 ? 'M' : 'L'} ${x}% ${y}`;
-    }).join(' ');
-    
-    // Create polygon for area fill
-    const polygonPoints = valueHistory.map((value, index) => {
-      const x = `${(index / (valueHistory.length - 1)) * 100}%`;
-      const y = chartHeight - ((value - minValue) / valueRange) * chartHeight;
-      return `${x},${y}`;
-    }).join(' ') + ` 100%,${chartHeight} 0,${chartHeight}`;
-    
-    // Create simple time labels
-    const timeLabels = ['9:30', '11:00', '12:30', '14:00', '15:30'];
-    
-    return (
-      <div className="w-full h-full relative bg-white dark:bg-gray-800 rounded-md overflow-hidden">
-        {/* Min/Max labels */}
-        <div className="absolute top-2 right-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          ${maxValue.toFixed(2)}
-        </div>
-        <div className="absolute bottom-2 right-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          ${minValue.toFixed(2)}
-        </div>
-        
-        <svg 
-          width={chartWidth} 
-          height={chartHeight} 
-          className="now-average-chart"
-          preserveAspectRatio="none"
-        >
-          {/* Grid lines */}
-          <line 
-            x1="0" 
-            y1={chartHeight/2} 
-            x2="100%" 
-            y2={chartHeight/2} 
-            stroke="rgba(0,0,0,0.1)" 
-            strokeWidth="1"
-            strokeDasharray="5,5"
-          />
-          
-          {/* Area fill */}
-          <polygon
-            points={polygonPoints}
-            fill={fillColor}
-          />
-          
-          {/* Base line */}
-          <line 
-            x1="0" 
-            y1={chartHeight} 
-            x2="100%" 
-            y2={chartHeight} 
-            stroke="rgba(0,0,0,0.1)" 
-            strokeWidth="1"
-          />
-          
-          {/* Price line */}
-          <path
-            d={pathData}
-            fill="none"
-            stroke={lineColor}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          
-          {/* Time labels */}
-          {timeLabels.map((label, index) => {
-            const x = (index / (timeLabels.length - 1)) * 100;
-            return (
-              <text 
-                key={index} 
-                x={`${x}%`} 
-                y={chartHeight - 5} 
-                textAnchor={index === 0 ? "start" : index === timeLabels.length - 1 ? "end" : "middle"}
-                fill="rgba(0,0,0,0.5)"
-                fontSize="10"
-                className="chart-label"
-              >
-                {label}
-              </text>
-            );
-          })}
-        </svg>
       </div>
     );
   };
@@ -472,18 +395,6 @@ const Finance = () => {
     
     return priceData;
   };
-  
-  // Listen for window resize to update chart dimensions
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
   
   // Render simple price chart for a stock
   const renderPriceChart = (company) => {
@@ -640,85 +551,6 @@ const Finance = () => {
       }
     }
   };
-  
-  // Update selected stock data every 30 seconds when modal is open
-  useEffect(() => {
-    if (showTradeModal && selectedStock) {
-      // Clear any existing timer
-      if (modalRefreshTimer.current) {
-        clearInterval(modalRefreshTimer.current);
-      }
-      
-      // First immediate update when modal opens
-      updateModalChartData(selectedStock);
-      
-      // Set up a new timer that synchronizes with the global 5-second clock
-      modalRefreshTimer.current = setInterval(() => {
-        // Set refreshing state
-        setIsRefreshing(true);
-        
-        // Find the latest data for the selected stock
-        const updatedStock = stockMarket.companies.find(c => c.id === selectedStock.id);
-        
-        if (updatedStock) {
-          // Update the selected stock with fresh data
-          setSelectedStock(updatedStock);
-          
-          // Update chart data with latest price
-          updateModalChartData(updatedStock);
-          
-          // Update refresh count for UI feedback
-          setModalRefreshCount(prev => prev + 1);
-          
-          // Reset the timer by updating lastModalRefresh
-          setLastModalRefresh(Date.now());
-          
-          // Show refresh animation
-          setShowRefreshAnimation(true);
-          setTimeout(() => setShowRefreshAnimation(false), 800);
-        }
-        
-        // Reset refreshing state
-        setTimeout(() => setIsRefreshing(false), 500);
-      }, 5000); // 5 seconds interval
-      
-      // Clean up interval when modal closes or component unmounts
-      return () => {
-        if (modalRefreshTimer.current) {
-          clearInterval(modalRefreshTimer.current);
-          modalRefreshTimer.current = null;
-        }
-      };
-    }
-  }, [showTradeModal, selectedStock?.id, stockMarket.companies]);
-
-  // Add a useEffect that forces the timer to update every second
-  useEffect(() => {
-    if (!showTradeModal) return;
-    
-    // Force timer update every second to show countdown
-    const timerUpdateInterval = setInterval(() => {
-      // This forces a re-render without changing the actual lastModalRefresh time
-      const now = Date.now();
-      const timeUntilRefresh = Math.max(0, 5000 - (now - lastModalRefresh));
-      
-      // If timer is about to expire or has expired, prepare for the next refresh
-      if (timeUntilRefresh <= 50) {
-        // Instead of just forcing a visual update, also trigger the actual update 
-        // if we're very close to the 5-second mark to ensure consistent updates
-        if (stockMarket.companies && selectedStock) {
-          const updatedStock = stockMarket.companies.find(c => c.id === selectedStock.id);
-          if (updatedStock) {
-            setSelectedStock(updatedStock);
-            updateModalChartData(updatedStock);
-            setLastModalRefresh(now);
-          }
-        }
-      }
-    }, 200); // Update more frequently for smoother countdown
-    
-    return () => clearInterval(timerUpdateInterval);
-  }, [showTradeModal, selectedStock, stockMarket.companies, lastModalRefresh]);
   
   // Handle trade execution
   const executeTrade = () => {
@@ -1597,7 +1429,7 @@ const Finance = () => {
       setIsGlobalRefreshing(true);
       
       // Trigger refresh of price data and charts
-      dispatch({ type: 'REFRESH_PRICES' });
+      stockMarketDispatch({ type: 'REFRESH_PRICES' });
       
       // Update last refresh time
       setLastGlobalRefresh(Date.now());
@@ -1614,13 +1446,9 @@ const Finance = () => {
         globalRefreshTimer.current = null;
       }
     };
-  }, [dispatch]);
+  }, [stockMarketDispatch]);
 
-  // Add function to calculate time until next refresh for the main screen
-  const getTimeUntilNextGlobalRefresh = () => {
-    const secondsSinceRefresh = Math.floor((Date.now() - lastGlobalRefresh) / 1000);
-    return Math.max(0, 5 - secondsSinceRefresh);
-  };
+  // This function is now defined earlier in the component with useCallback
 
   // Add a useEffect to update the countdown timer for global refresh
   useEffect(() => {
@@ -1800,24 +1628,116 @@ const Finance = () => {
     );
   };
 
-  // Add a useEffect to track NOW Average data and update it every 5 seconds
-  useEffect(() => {
-    if (stockMarket.nowAverage && stockMarket.nowAverage.valueHistory) {
-      // Update the data with current value history
-      setNowAverageChartData(stockMarket.nowAverage.valueHistory);
-      
-      // Set up a refresh timer to update the chart every 5 seconds
-      const nowAverageTimer = setInterval(() => {
-        if (stockMarket.nowAverage) {
-          setNowAverageChartData(stockMarket.nowAverage.valueHistory);
-        }
-      }, 5000);
-      
-      // Clean up the timer on unmount
-      return () => clearInterval(nowAverageTimer);
+  // *** NEW NOW AVERAGE CHART FUNCTION ***
+  const NOWAverageChart = () => {
+    const { nowAverage } = stockMarket;
+  
+    if (!nowAverage || !nowAverage.valueHistory || nowAverage.valueHistory.length < 2) {
+      return (
+        <div className="flex items-center justify-center h-full text-xs text-gray-400">
+          Collecting market data...
+        </div>
+      );
     }
-  }, [stockMarket.nowAverage]);
+  
+    // Filter out any non-finite values to prevent SVG errors
+    const filteredHistory = nowAverage.valueHistory.filter(value => Number.isFinite(value));
+  
+    // Need at least two valid points to draw a line
+    if (filteredHistory.length < 2) {
+      return (
+        <div className="flex items-center justify-center h-full text-xs text-gray-400">
+          Waiting for valid data...
+        </div>
+      );
+    }
+    
+    const valueHistory = filteredHistory; // Use the filtered history
+    const chartHeight = 60; // Smaller chart height for embedding
+  
+    const minValue = Math.min(...valueHistory);
+    const maxValue = Math.max(...valueHistory);
+    const valueRange = maxValue - minValue || 1;
+  
+    const pathData = valueHistory.map((value, index) => {
+      const x = (index / (valueHistory.length - 1)) * 100;
+      // Ensure y is also a finite number before adding to path
+      let yCoord = chartHeight - ((value - minValue) / valueRange) * chartHeight;
+      if (!Number.isFinite(yCoord)) {
+        yCoord = chartHeight / 2; // Default to middle if calculation fails
+      }
+      return `${index === 0 ? 'M' : 'L'} ${x}% ${yCoord.toFixed(2)}`;
+    }).join(' ');
+  
+    const marketUp = valueHistory[valueHistory.length - 1] >= valueHistory[0];
+    const lineColor = marketUp ? '#22c55e' : '#ef4444';
+  
+    return (
+      <svg 
+        width="100%" 
+        height={chartHeight} 
+        preserveAspectRatio="none" 
+        className="overflow-visible"
+      >
+        {/* Simplified line without fill */}
+        <path
+          d={pathData}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  };
 
+  // *** NEW NOW AVERAGE DISPLAY FUNCTION ***
+  const NOWAverageDisplay = () => {
+    const { nowAverage } = stockMarket;
+
+    if (!nowAverage || typeof nowAverage.currentValue === 'undefined') {
+      return (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center text-gray-500">
+          Loading Market Data...
+        </div>
+      );
+    }
+
+    const formattedValue = nowAverage.currentValue.toFixed(2);
+    const formattedChange = (nowAverage.percentChange >= 0 ? '+' : '') + nowAverage.percentChange.toFixed(2);
+    const isUp = nowAverage.percentChange >= 0;
+    const changeColor = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-6 border border-gray-200 dark:border-gray-700">
+        <div className="p-5">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">NOW Average</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Overall Market Indicator</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{formattedValue}</p>
+              <p className={`text-sm font-medium ${changeColor} flex items-center justify-end`}>
+                {formattedChange}%
+                {isUp ? (
+                  <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                ) : (
+                  <svg className="ml-1 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                )}
+              </p>
+            </div>
+          </div>
+          {/* Embedded Chart */}
+          <div className="h-16 -mx-5 -mb-5 mt-2 opacity-80">
+            <NOWAverageChart />
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <div className="bg-gray-50 min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
@@ -1836,8 +1756,8 @@ const Finance = () => {
         {/* Stock ticker */}
         {renderStockTicker()}
         
-        {/* NOW Average */}
-        {renderNOWAverage()}
+        {/* ADD THE NEW NOWAverageDisplay CALL BELOW */}
+        <NOWAverageDisplay />
         
         {/* Net Worth Card */}
         {renderNetWorthCard()}

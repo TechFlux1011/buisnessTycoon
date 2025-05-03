@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import SaveDataService from '../services/SaveDataService';
+import { useAuth } from './AuthContext';
 
 // Initial game state
 const initialState = {
@@ -28,6 +30,53 @@ const initialState = {
     lastEventTime: null,
     notificationVisible: false,
   },
+  // Game clock settings
+  timeSettings: {
+    gameTimeRatio: 60, // 1 real second = 60 game seconds (1 minute real = 60 minutes game)
+    lastRealTime: Date.now(), // Last real-world timestamp
+    gameTime: Date.now(), // Current game time
+    totalOfflineTime: 0, // Total time spent offline in milliseconds
+  }
+};
+
+// Functions for game time calculations
+const calculateGameTimePassed = (realTimeElapsed, gameTimeRatio) => {
+  return realTimeElapsed * gameTimeRatio;
+};
+
+const calculateRealTimePassed = (gameTimeElapsed, gameTimeRatio) => {
+  return gameTimeElapsed / gameTimeRatio;
+};
+
+const getCurrentGameTime = (state) => {
+  const realTimeNow = Date.now();
+  const realTimeElapsed = realTimeNow - state.timeSettings.lastRealTime;
+  const gameTimeElapsed = calculateGameTimePassed(realTimeElapsed, state.timeSettings.gameTimeRatio);
+  
+  return state.timeSettings.gameTime + gameTimeElapsed;
+};
+
+// Calculate how much game time has passed since last update
+const getElapsedGameTime = (state) => {
+  const currentGameTime = getCurrentGameTime(state);
+  return (currentGameTime - state.timeSettings.gameTime) / 1000; // in seconds
+};
+
+// Format game time for display
+const formatGameTime = (timestamp) => {
+  const date = new Date(timestamp);
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+    second: date.getSeconds(),
+    fullDate: date.toLocaleDateString(),
+    fullTime: date.toLocaleTimeString(),
+    shortTime: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    fullDateTime: date.toLocaleString()
+  };
 };
 
 const calcIncome = (state) => {
@@ -589,8 +638,8 @@ function gameReducer(state, action) {
       const now = Date.now();
       const income = calcIncome(state);
       
-      // Calculate elapsed time in seconds
-      const elapsed = (now - state.lastUpdate) / 1000;
+      // Get elapsed game time in seconds (using game clock)
+      const elapsed = getElapsedGameTime(state);
       
       // Apply income for elapsed time (only passive income from assets/business)
       const newMoney = state.money + income * elapsed;
@@ -639,6 +688,9 @@ function gameReducer(state, action) {
         newLevel++;
       }
       
+      // Update game time based on real time passed
+      const currentGameTime = getCurrentGameTime(state);
+      
       return {
         ...state,
         money: newMoney,
@@ -649,6 +701,11 @@ function gameReducer(state, action) {
           ...state.playerStatus,
           job: updatedJob,
           jobExperience: jobExperience
+        },
+        timeSettings: {
+          ...state.timeSettings,
+          lastRealTime: now,
+          gameTime: currentGameTime
         }
       };
     }
@@ -1094,6 +1151,46 @@ function gameReducer(state, action) {
         money: Math.max(0, state.money + action.payload)
       };
     
+    case 'LOAD_GAME': {
+      return {
+        ...state,
+        ...action.payload
+      };
+    }
+    
+    case 'RESET_GAME': {
+      return {
+        ...initialState
+      };
+    }
+    
+    case 'CALCULATE_OFFLINE_PROGRESS': {
+      const now = Date.now();
+      
+      // Calculate time passed while offline
+      const offlineRealTime = now - state.timeSettings.lastRealTime;
+      const offlineGameTime = calculateGameTimePassed(offlineRealTime, state.timeSettings.gameTimeRatio);
+      
+      // Cap max offline time to prevent excessive gains (e.g., max 24 hours of progress)
+      const maxOfflineTimeInMs = 24 * 60 * 60 * 1000; // 24 hours in ms
+      const cappedOfflineGameTime = Math.min(offlineGameTime, maxOfflineTimeInMs);
+      
+      // Calculate income earned during offline time
+      const income = calcIncome(state);
+      const offlineIncome = income * (cappedOfflineGameTime / 1000); // Convert to seconds
+      
+      return {
+        ...state,
+        money: state.money + offlineIncome,
+        timeSettings: {
+          ...state.timeSettings,
+          lastRealTime: now,
+          gameTime: state.timeSettings.gameTime + cappedOfflineGameTime,
+          totalOfflineTime: state.timeSettings.totalOfflineTime + offlineRealTime
+        }
+      };
+    }
+    
     default:
       return state;
   }
@@ -1105,38 +1202,221 @@ const GameContext = createContext();
 // Context provider component
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
-  
+  const { currentUser, authInitialized } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showOfflineProgress, setShowOfflineProgress] = useState(false);
+  const [offlineData, setOfflineData] = useState({ 
+    offlineTime: 0, 
+    offlineEarnings: 0 
+  });
+
+  // Load game state when user logs in
+  useEffect(() => {
+    async function loadSavedGameState() {
+      try {
+        if (currentUser && authInitialized) {
+          console.log("Loading saved game state for user:", currentUser.uid);
+          setIsLoading(true);
+          const savedState = await SaveDataService.loadGameState(currentUser.uid);
+          if (savedState) {
+            // If saved state exists, load it
+            console.log("Saved state found, loading into game state");
+            dispatch({ type: 'LOAD_GAME', payload: savedState });
+            
+            // Get current time and last time user was playing
+            const now = Date.now();
+            const lastRealTime = savedState.timeSettings?.lastRealTime || now;
+            const offlineTime = now - lastRealTime;
+            
+            // If significant time has passed (more than 1 minute)
+            if (offlineTime > 60000) {
+              // Calculate offline progress and prepare to show the modal
+              const oldMoney = savedState.money;
+              
+              // Calculate offline progress
+              dispatch({ type: 'CALCULATE_OFFLINE_PROGRESS' });
+              
+              // Wait for state update to complete
+              setTimeout(() => {
+                // Calculate how much money was earned offline
+                const offlineEarnings = state.money - oldMoney;
+                
+                // Only show modal if player earned something
+                if (offlineEarnings > 0) {
+                  setOfflineData({
+                    offlineTime,
+                    offlineEarnings
+                  });
+                  setShowOfflineProgress(true);
+                }
+              }, 100);
+            }
+          } else {
+            console.log("No saved state found, using initial state");
+            // Initialize player state for new users
+            dispatch({ type: 'INIT_PLAYER' });
+          }
+          setIsLoading(false);
+        } else if (authInitialized && !currentUser) {
+          console.log("No user logged in, using default state");
+          // Reset to initial state if no user is logged in
+          dispatch({ type: 'RESET_GAME' });
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error("Error loading game state:", err);
+        setError(err.message);
+        setIsLoading(false);
+      }
+    }
+
+    loadSavedGameState();
+  }, [currentUser, authInitialized]);
+
+  // Auto-save game state periodically
+  useEffect(() => {
+    if (!currentUser || isLoading || !authInitialized) return;
+
+    console.log("Setting up auto-save interval");
+    const saveInterval = setInterval(async () => {
+      try {
+        console.log("Auto-saving game state...");
+        await SaveDataService.autoSaveGameState(currentUser.uid, state);
+        console.log("Auto-save completed");
+      } catch (err) {
+        console.error("Error during auto-save:", err);
+      }
+    }, 60000); // Auto-save every minute
+
+    return () => {
+      console.log("Clearing auto-save interval");
+      clearInterval(saveInterval);
+    };
+  }, [currentUser, state, isLoading, authInitialized]);
+
+  // Manual save function
+  const saveGame = async () => {
+    if (!currentUser) {
+      console.warn("Attempting to save game without user authentication");
+      return false;
+    }
+    
+    try {
+      const result = await SaveDataService.saveGameState(currentUser.uid, state);
+      return result;
+    } catch (err) {
+      console.error("Error saving game state:", err);
+      setError("Failed to save game: " + err.message);
+      return false;
+    }
+  };
+
+  // Reset game state (start new game)
+  const resetGame = async () => {
+    try {
+      if (currentUser) {
+        await SaveDataService.deleteSaveData(currentUser.uid);
+      }
+      dispatch({ type: 'RESET_GAME' });
+      // Re-initialize player after reset
+      dispatch({ type: 'INIT_PLAYER' });
+      return true;
+    } catch (err) {
+      console.error("Error resetting game:", err);
+      setError("Failed to reset game: " + err.message);
+      return false;
+    }
+  };
+
+  // Update money function
+  const updateMoney = (amount) => {
+    dispatch({ type: 'UPDATE_MONEY', payload: amount });
+  };
+
   // Passive income generator - just check once per second
   useEffect(() => {
+    if (isLoading) return;
+    
     const intervalId = setInterval(() => {
       dispatch({ type: 'UPDATE_INCOME' });
     }, 1000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [isLoading]);
   
-  // Initialize player background on first render
+  // Initialize player background on first render if not already set
   useEffect(() => {
-    if (!state.playerStatus.background || Object.keys(state.skills).length === 0) {
+    if (!isLoading && (!state.playerStatus.background || Object.keys(state.skills).length === 0)) {
+      console.log("Initializing player background and skills");
       dispatch({ type: 'INIT_PLAYER' });
     }
-  }, [state.playerStatus.background, state.skills]);
+  }, [isLoading, state.playerStatus.background, state.skills]);
   
-  const updateMoney = (amount) => {
-    dispatch({ type: 'UPDATE_MONEY', payload: amount });
+  // If there's an error, show it in the UI
+  if (error) {
+    return (
+      <div className="game-error-container p-6 bg-red-100 text-red-800 rounded-lg m-4">
+        <h3 className="text-lg font-bold mb-2">Game Error</h3>
+        <p>{error}</p>
+        <button 
+          onClick={() => setError(null)}
+          className="mt-4 bg-red-600 text-white px-4 py-2 rounded"
+        >
+          Dismiss Error
+        </button>
+      </div>
+    );
+  }
+  
+  // Show loading indicator
+  if (isLoading) {
+    return (
+      <div className="game-loading-container p-6 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-lg">Loading Game Data...</p>
+      </div>
+    );
+  }
+  
+  // Game time functions
+  const getGameTime = () => {
+    return formatGameTime(getCurrentGameTime(state));
   };
+  
+  // Function to close the offline progress modal
+  const handleCloseOfflineProgress = () => {
+    setShowOfflineProgress(false);
+  };
+  
+  // Import and use the offline progress modal
+  const OfflineProgressModal = React.lazy(() => import('../components/OfflineProgressModal'));
   
   return (
     <GameContext.Provider 
       value={{ 
-        state, 
-        dispatch, 
+        gameState: state, 
+        gameDispatch: dispatch,
         jobExperienceNeededForLevel, 
         getJobTitleForLevel,
-        updateMoney
+        updateMoney,
+        saveGame,
+        resetGame,
+        isLoading,
+        getGameTime,
       }}
     >
       {children}
+      
+      {showOfflineProgress && (
+        <React.Suspense fallback={<div>Loading...</div>}>
+          <OfflineProgressModal 
+            offlineEarnings={offlineData.offlineEarnings}
+            offlineTime={offlineData.offlineTime}
+            onClose={handleCloseOfflineProgress}
+          />
+        </React.Suspense>
+      )}
     </GameContext.Provider>
   );
 }

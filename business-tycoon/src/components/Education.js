@@ -5,10 +5,29 @@ import { entryLevelJobs, midLevelJobs, seniorJobs, executiveJobs, ownerJobs } fr
 import '../styles/Education.css';
 
 const Education = () => {
-  const { state, dispatch } = useGame();
+  const { gameState, gameDispatch: dispatch } = useGame();
   const [selectedJobPath, setSelectedJobPath] = useState(null);
   const [expandedTier, setExpandedTier] = useState(null);
-
+  
+  // Move the education progress update useEffect to the top, before conditional returns
+  useEffect(() => {
+    if (gameState && gameState.currentEducation) {
+      const timer = setInterval(() => {
+        dispatch({ type: 'UPDATE_EDUCATION_PROGRESS' });
+      }, 1000); // Update every second
+      
+      return () => clearInterval(timer);
+    }
+  }, [gameState?.currentEducation, dispatch]);
+  
+  // Early return with loading message if gameState or skills is undefined
+  if (!gameState || !gameState.skills) {
+    return <div className="loading-container">Loading game data...</div>;
+  }
+  
+  // Use gameState instead of state throughout the component
+  const state = gameState;
+  
   // Start education
   const startEducation = (education) => {
     dispatch({
@@ -16,17 +35,6 @@ const Education = () => {
       payload: education
     });
   };
-  
-  // Update education progress
-  useEffect(() => {
-    if (state.currentEducation) {
-      const timer = setInterval(() => {
-        dispatch({ type: 'UPDATE_EDUCATION_PROGRESS' });
-      }, 1000); // Update every second
-      
-      return () => clearInterval(timer);
-    }
-  }, [state.currentEducation, dispatch]);
   
   // Calculate how much time is left for education
   const getTimeRemaining = () => {

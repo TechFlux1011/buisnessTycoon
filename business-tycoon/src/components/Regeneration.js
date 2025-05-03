@@ -3,8 +3,16 @@ import { useGame } from '../context/GameContext';
 import '../styles/Regeneration.css';
 
 const Regeneration = () => {
-  const { state, dispatch } = useGame();
+  const { gameState, gameDispatch: dispatch } = useGame();
   const [confirmVisible, setConfirmVisible] = useState(false);
+  
+  // Early return with loading message if gameState is undefined
+  if (!gameState) {
+    return <div className="loading-container">Loading game data...</div>;
+  }
+  
+  // Use gameState instead of state throughout the component
+  const state = gameState;
   
   const showConfirmation = () => {
     setConfirmVisible(true);

@@ -1,70 +1,87 @@
-# Getting Started with Create React App
+# Business Tycoon Game
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A web-based business simulation game where players can work, invest, build businesses, and grow their wealth.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Authentication System**: User registration, login, and profile management
+- **Save Game Progress**: Game progress is saved automatically to the cloud
+- **Multiple Game Systems**:
+  - Work to earn money
+  - Apply for jobs and gain experience
+  - Manage assets and banking
+  - Invest in the stock market
+  - Start and grow your own business
+  - Education and skill development
 
-### `npm start`
+## Setup Instructions
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Firebase Configuration
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+1. Create a Firebase project at [https://console.firebase.google.com/](https://console.firebase.google.com/)
+2. Enable Authentication (Email/Password provider)
+3. Create a Firestore database
+4. Get your Firebase configuration:
+   - Go to Project Settings > General
+   - Scroll down to "Your apps" section
+   - Add a web app if you haven't already
+   - Copy the Firebase configuration object
 
-### `npm test`
+5. Update the Firebase configuration in `src/config/firebase.js` with your own values:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```javascript
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-project-id.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+```
 
-### `npm run build`
+### Installing Dependencies
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Running the Application Locally
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+npm start
+```
 
-### `npm run eject`
+## Deployment to GitHub Pages
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. Update the `homepage` property in `package.json` to your GitHub Pages URL:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```json
+"homepage": "https://yourusername.github.io/business-tycoon"
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+2. Deploy to GitHub Pages:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+npm run deploy
+```
 
-## Learn More
+## Technology Stack
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- React
+- Firebase (Authentication and Firestore)
+- Chart.js for finance charts
+- Tailwind CSS for styling
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Game Mechanics
 
-### Code Splitting
+- **Progression System**: Gain experience and level up
+- **Job System**: Apply for jobs, gain experience, and earn higher salaries
+- **Stock Market**: Invest in stocks and watch your investments grow
+- **Business Management**: Start and grow your own business
+- **Education**: Improve your skills through education
+- **Ascension System**: Reset your game with bonuses for a new generation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## License
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT

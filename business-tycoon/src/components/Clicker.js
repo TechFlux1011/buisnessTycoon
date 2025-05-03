@@ -4,7 +4,9 @@ import '../styles/Clicker.css';
 import Regeneration from './Regeneration';
 
 const Clicker = () => {
-  const { state, dispatch, jobExperienceNeededForLevel } = useGame();
+  const { gameState, gameDispatch: dispatch, jobExperienceNeededForLevel } = useGame();
+  
+  // Move all hooks to the top BEFORE any conditional returns
   const [income, setIncome] = useState(0);
   const [clickValue, setClickValue] = useState(0.01);
   const [showAscension, setShowAscension] = useState(false);
@@ -16,20 +18,20 @@ const Clicker = () => {
   const [showPromotionNotification, setShowPromotionNotification] = useState(false);
   
   // Get the click speed multiplier based on transportation
-  const getClicksPerSecond = useCallback(() => {
-    if (!state.playerStatus.transportation) {
+  const getClicksPerSecond = useCallback((playerStatus) => {
+    if (!playerStatus?.transportation) {
       return 0; // No transportation means no auto-clicking
     }
     
     // Base rate is 1 click per second for basic transportation (bicycle)
     const baseClickRate = 1;
     // Apply transportation multiplier to get clicks per second
-    return baseClickRate * state.playerStatus.transportation.clickSpeedMultiplier;
-  }, [state.playerStatus.transportation]);
+    return baseClickRate * playerStatus.transportation.clickSpeedMultiplier;
+  }, []);
   
   // Calculate the interval for auto-clicking in milliseconds
-  const getClickInterval = useCallback(() => {
-    const clicksPerSecond = getClicksPerSecond();
+  const getClickInterval = useCallback((playerStatus) => {
+    const clicksPerSecond = getClicksPerSecond(playerStatus);
     if (clicksPerSecond <= 0) return 0; // No auto-clicking
     
     // Convert clicks per second to milliseconds between clicks
@@ -37,12 +39,15 @@ const Clicker = () => {
   }, [getClicksPerSecond]);
 
   // Check if auto-clicking is available
-  const canAutoClick = useCallback(() => {
-    return state.playerStatus.transportation !== null;
-  }, [state.playerStatus.transportation]);
+  const canAutoClick = useCallback((playerStatus) => {
+    return playerStatus?.transportation !== null;
+  }, []);
   
-  // Calculate income per second and click value
+  // Effect to calculate income per second and click value
   useEffect(() => {
+    if (!gameState || !gameState.playerStatus) return;
+    
+    const state = gameState;
     let totalIncome = 0;
     let newClickValue = 0.01; // Default 1 penny
     
@@ -77,12 +82,14 @@ const Clicker = () => {
     
     setIncome(totalIncome);
     setClickValue(newClickValue);
-  }, [state.playerStatus.job, state.assets, state.playerStatus.business, state.level, state.playerStatus.ascensionBonus]);
+  }, [gameState]);
   
   // Auto-click handler when holding down the button
   useEffect(() => {
-    if (isHolding && canAutoClick()) {
-      const interval = getClickInterval();
+    if (!gameState || !gameState.playerStatus) return;
+    
+    if (isHolding && canAutoClick(gameState.playerStatus)) {
+      const interval = getClickInterval(gameState.playerStatus);
       if (interval > 0) {
         // Start auto-clicking at the rate determined by transportation
         intervalRef.current = setInterval(() => {
@@ -97,17 +104,90 @@ const Clicker = () => {
         }
       };
     }
-  }, [isHolding, dispatch, getClickInterval, canAutoClick]);
+  }, [isHolding, dispatch, getClickInterval, canAutoClick, gameState]);
   
   // Check for level-based ascensions
   useEffect(() => {
+    if (!gameState) return;
+    
     // Ascension milestone levels
     const milestones = [10, 25, 50, 100];
     
-    if (milestones.includes(state.level)) {
+    if (milestones.includes(gameState.level)) {
       setShowAscension(true);
     }
-  }, [state.level]);
+  }, [gameState]);
+  
+  // Add effect to ensure cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+  
+  // Add a listener for touch/mouse cancellation
+  useEffect(() => {
+    const handleCancelEvents = () => {
+      setIsHolding(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+    
+    window.addEventListener('blur', handleCancelEvents);
+    return () => {
+      window.removeEventListener('blur', handleCancelEvents);
+    };
+  }, []);
+  
+  // Add an effect to check for promotion readiness
+  useEffect(() => {
+    if (!gameState || !gameState.playerStatus) return;
+    
+    if (gameState.playerStatus.job?.readyForPromotion && !showPromotionNotification) {
+      setShowPromotionNotification(true);
+      
+      // Hide after 5 seconds
+      const timer = setTimeout(() => {
+        setShowPromotionNotification(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    } else if (!gameState.playerStatus.job?.readyForPromotion && showPromotionNotification) {
+      // Make sure notification is hidden when not ready for promotion
+      setShowPromotionNotification(false);
+    }
+  }, [gameState, showPromotionNotification]);
+  
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (boostsContainerRef.current && 
+          !boostsContainerRef.current.contains(event.target) && 
+          activeTooltip !== null) {
+        setActiveTooltip(null);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [activeTooltip]);
+  
+  // Early return with loading message if gameState or playerStatus is undefined
+  if (!gameState || !gameState.playerStatus) {
+    return <div className="loading-container">Loading game data...</div>;
+  }
+  
+  // Use gameState instead of state throughout the component
+  const state = gameState;
   
   // Calculate progress percentage to next level
   const experienceNeededForLevel = (level) => {
@@ -142,7 +222,7 @@ const Clicker = () => {
       showPennyGain(e.clientX, e.clientY - 20);
     }
     
-    if (canAutoClick()) {
+    if (canAutoClick(state.playerStatus)) {
       setIsHolding(true);
     }
   };
@@ -161,7 +241,7 @@ const Clicker = () => {
     // Always do a single click immediately on touch
     dispatch({ type: 'CLICK' });
     
-    if (canAutoClick()) {
+    if (canAutoClick(state.playerStatus)) {
       setIsHolding(true);
     }
   };
@@ -170,31 +250,6 @@ const Clicker = () => {
     if (e) e.preventDefault();
     setIsHolding(false);
   };
-  
-  // Add effect to ensure cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-  
-  // Add a listener for touch/mouse cancellation
-  useEffect(() => {
-    const handleCancelEvents = () => {
-      setIsHolding(false);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-    
-    window.addEventListener('blur', handleCancelEvents);
-    return () => {
-      window.removeEventListener('blur', handleCancelEvents);
-    };
-  }, []);
   
   const handleAscension = () => {
     dispatch({ type: 'ASCEND' });
@@ -225,25 +280,6 @@ const Clicker = () => {
       setActiveTooltip(tooltipId);
     }
   };
-  
-  // Close tooltip when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (boostsContainerRef.current && 
-          !boostsContainerRef.current.contains(event.target) && 
-          activeTooltip !== null) {
-        setActiveTooltip(null);
-      }
-    }
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [activeTooltip]);
   
   // Count total businesses
   const countBusinesses = () => {
@@ -300,23 +336,6 @@ const Clicker = () => {
       }
     }, 1000);
   };
-  
-  // Add an effect to check for promotion readiness
-  useEffect(() => {
-    if (state.playerStatus.job?.readyForPromotion && !showPromotionNotification) {
-      setShowPromotionNotification(true);
-      
-      // Hide after 5 seconds
-      const timer = setTimeout(() => {
-        setShowPromotionNotification(false);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    } else if (!state.playerStatus.job?.readyForPromotion && showPromotionNotification) {
-      // Make sure notification is hidden when not ready for promotion
-      setShowPromotionNotification(false);
-    }
-  }, [state.playerStatus.job?.readyForPromotion, showPromotionNotification]);
   
   // Add a dismiss function
   const dismissPromotionNotification = () => {
@@ -470,11 +489,11 @@ const Clicker = () => {
             >
               <div className="boost-icon transportation-boost">
                 <span>{state.playerStatus.transportation.image}</span>
-                <span className="boost-text">{getClicksPerSecond()}x</span>
+                <span className="boost-text">{getClicksPerSecond(state.playerStatus)}x</span>
               </div>
               <div className="boost-tooltip">
                 <h4>Transportation Boost</h4>
-                <p>Your {state.playerStatus.transportation.name} allows you to work {getClicksPerSecond()} clicks/sec when holding down.</p>
+                <p>Your {state.playerStatus.transportation.name} allows you to work {getClicksPerSecond(state.playerStatus)} clicks/sec when holding down.</p>
                 <button className="tooltip-close" onClick={(e) => {
                   e.stopPropagation();
                   setActiveTooltip(null);
@@ -526,7 +545,7 @@ const Clicker = () => {
         
         {/* The tap pad area */}
         <div 
-          className={`tap-pad ${!canAutoClick() ? 'no-auto-click' : ''}`}
+          className={`tap-pad ${!canAutoClick(state.playerStatus) ? 'no-auto-click' : ''}`}
           onClick={handleClick}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
@@ -537,7 +556,7 @@ const Clicker = () => {
           role="button"
           aria-label="Work button"
         >
-          {!canAutoClick() && (
+          {!canAutoClick(state.playerStatus) && (
             <div className="auto-click-info">
               <span>🚲 Buy transportation to enable auto-clicking</span>
             </div>

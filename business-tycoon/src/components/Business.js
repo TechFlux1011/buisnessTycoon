@@ -4,8 +4,16 @@ import { businessTypes, getBusinessCost, getBusinessUpgradeMultiplier } from '..
 import '../styles/Business.css';
 
 const Business = () => {
-  const { state, dispatch } = useGame();
+  const { gameState, gameDispatch: dispatch } = useGame();
   const [priceFilter, setPriceFilter] = useState('all');
+  
+  // Early return with loading message if gameState or playerStatus is undefined
+  if (!gameState || !gameState.playerStatus) {
+    return <div className="loading-container">Loading game data...</div>;
+  }
+  
+  // Use gameState instead of state throughout the component
+  const state = gameState;
   
   const startBusiness = (business) => {
     const cost = getBusinessCost(business, state.playerStatus.background);

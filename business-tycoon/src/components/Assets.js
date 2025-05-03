@@ -4,9 +4,9 @@ import { assets, transportationOptions, housingOptions } from '../data/gameData'
 import '../styles/Assets.css';
 
 const Assets = () => {
-  const { state, dispatch } = useGame();
-  const { money } = state;
+  const { gameState, gameDispatch: dispatch } = useGame();
   
+  // Move all hooks to the top BEFORE any conditional returns
   const [activeTab, setActiveTab] = useState('assets');
   const [descriptionModal, setDescriptionModal] = useState(null);
   const [longPressActive, setLongPressActive] = useState(false);
@@ -25,7 +25,28 @@ const Assets = () => {
     minBeds: 0,
     propertyTypes: []
   });
-
+  
+  // Clean up any timers when component unmounts
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+      if (modalTimeout.current) {
+        clearTimeout(modalTimeout.current);
+      }
+    };
+  }, []);
+  
+  // Early return with loading message if gameState or playerStatus is undefined
+  if (!gameState || !gameState.playerStatus) {
+    return <div className="loading-container">Loading game data...</div>;
+  }
+  
+  // Use gameState instead of state throughout the component
+  const state = gameState;
+  const { money } = state;
+  
   const toggleTab = (tab) => {
     setActiveTab(tab);
   };
@@ -169,18 +190,6 @@ const Assets = () => {
     
     longPressItem.current = null;
   };
-  
-  // Clean up any timers when component unmounts
-  useEffect(() => {
-    return () => {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-      }
-      if (modalTimeout.current) {
-        clearTimeout(modalTimeout.current);
-      }
-    };
-  }, []);
   
   const getAssetIconAndColor = (assetId) => {
     // Return appropriate icon and background color based on asset type
