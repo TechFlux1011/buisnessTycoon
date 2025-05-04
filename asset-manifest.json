@@ -1,17 +1,17 @@
 {
   "files": {
-    "main.css": "/business-tycoon/static/css/main.cb2580f3.css",
-    "main.js": "/business-tycoon/static/js/main.bf23500f.js",
-    "static/js/428.54e20c01.chunk.js": "/business-tycoon/static/js/428.54e20c01.chunk.js",
-    "static/js/453.d5f383ac.chunk.js": "/business-tycoon/static/js/453.d5f383ac.chunk.js",
-    "index.html": "/business-tycoon/index.html",
-    "main.cb2580f3.css.map": "/business-tycoon/static/css/main.cb2580f3.css.map",
-    "main.bf23500f.js.map": "/business-tycoon/static/js/main.bf23500f.js.map",
-    "428.54e20c01.chunk.js.map": "/business-tycoon/static/js/428.54e20c01.chunk.js.map",
-    "453.d5f383ac.chunk.js.map": "/business-tycoon/static/js/453.d5f383ac.chunk.js.map"
+    "main.css": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/css/main.cb2580f3.css",
+    "main.js": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/js/main.add591fd.js",
+    "static/js/428.54e20c01.chunk.js": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/js/428.54e20c01.chunk.js",
+    "static/js/453.d5f383ac.chunk.js": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/js/453.d5f383ac.chunk.js",
+    "index.html": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/index.html",
+    "main.cb2580f3.css.map": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/css/main.cb2580f3.css.map",
+    "main.add591fd.js.map": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/js/main.add591fd.js.map",
+    "428.54e20c01.chunk.js.map": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/js/428.54e20c01.chunk.js.map",
+    "453.d5f383ac.chunk.js.map": "https://techflux1011.github.io/buisnessTycoon-1/business-tycoon/static/js/453.d5f383ac.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.cb2580f3.css",
-    "static/js/main.bf23500f.js"
+    "static/js/main.add591fd.js"
   ]
 }
