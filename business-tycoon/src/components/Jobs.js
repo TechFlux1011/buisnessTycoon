@@ -41,6 +41,110 @@ const Jobs = () => {
     return job.category === gameState.playerStatus.job.category;
   }, [gameState]);
   
+  // Calculate pay for job level
+  const calculatePayForLevel = (basePay, level) => {
+    return basePay * (1 + (level * 0.05));
+  };
+  
+  // Check if player's skills meet a specific requirement
+  const isSkillSufficient = (skill, requiredLevel) => {
+    if (!gameState || !gameState.skills) return false;
+    return gameState.skills[skill] >= requiredLevel;
+  };
+  
+  // Get a category for a job
+  const getJobCategory = (job) => {
+    return job.category || 'general';
+  };
+  
+  // Get an icon for a job based on its category
+  const getJobIcon = (category, jobCategory) => {
+    const icons = {
+      'general': '💼',
+      'labor': '🔨',
+      'service': '🛎️',
+      'office': '🖥️',
+      'creative': '🎨',
+      'technology': '💻',
+      'finance': '💰',
+      'healthcare': '⚕️',
+      'education': '🎓',
+      'management': '📊',
+      'executive': '👔',
+      'owner': '🏢'
+    };
+    
+    return icons[jobCategory] || icons[category] || '💼';
+  };
+  
+  // Get qualification status for a job
+  const getQualificationStatus = (job) => {
+    if (!gameState || !gameState.skills) {
+      return { qualified: false, percentQualified: 0, missingSkills: [] };
+    }
+    
+    const missingSkills = [];
+    let totalSkillsNeeded = 0;
+    let playerTotalSkill = 0;
+    
+    // Check each required skill
+    for (const [skill, level] of Object.entries(job.requirements || {})) {
+      totalSkillsNeeded += level;
+      playerTotalSkill += Math.min(gameState.skills[skill] || 0, level);
+      
+      if (!gameState.skills[skill] || gameState.skills[skill] < level) {
+        missingSkills.push(skill);
+      }
+    }
+    
+    const qualified = missingSkills.length === 0;
+    const percentQualified = totalSkillsNeeded > 0 ? (playerTotalSkill / totalSkillsNeeded) * 100 : 100;
+    
+    return { qualified, percentQualified, missingSkills };
+  };
+  
+  // Handle click on work event notification
+  const handleEventNotificationClick = () => {
+    if (gameState.workEvents.pendingEvent) {
+      setShowEventModal(true);
+    }
+  };
+  
+  // Dismiss a work event
+  const dismissEvent = () => {
+    setShowEventModal(false);
+    dispatch({ type: 'DISMISS_WORK_EVENT' });
+  };
+  
+  // Handle event choice selection
+  const handleEventChoice = (choiceIndex, e) => {
+    e.stopPropagation();
+    
+    if (!gameState.workEvents.pendingEvent) return;
+    
+    const choice = gameState.workEvents.pendingEvent.choices[choiceIndex];
+    
+    dispatch({
+      type: 'RESOLVE_WORK_EVENT',
+      payload: { choiceIndex }
+    });
+    
+    setShowEventModal(false);
+  };
+  
+  // Cancel a job application
+  const cancelApplication = (jobId) => {
+    if (pendingJob === jobId) {
+      setPendingJob(null);
+    }
+  };
+  
+  // Select a job to apply for
+  const selectJob = (job) => {
+    if (pendingJob) return;
+    applyForJob(job);
+  };
+  
   // Generate job listings based on player's skills and background
   const generateAvailableJobs = useCallback(() => {
     if (!gameState || !gameState.skills) return [];
@@ -211,6 +315,23 @@ const Jobs = () => {
     
     return jobPool;
   }, [gameState, getCategorySkillValue, hasBachelorsDegree, getJobTitleForLevel]);
+  
+  // Function to manually refresh the job listings
+  const handleManualRefresh = () => {
+    // Only allow refresh if not already refreshing
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    const jobs = generateAvailableJobs();
+    setAvailableJobs(jobs);
+    setLastJobRefresh(Date.now());
+    setRefreshTimer(30); // Reset the timer
+    
+    // Reset refreshing state after animation
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
+  };
   
   // Add effect to show promotion banner when ready
   useEffect(() => {
@@ -406,9 +527,6 @@ const Jobs = () => {
       setPendingJob(null);
     }, 2000); // 2 second processing time
   };
-  
-  // Rest of the component...
-  // ... existing code ...
   
   return (
     <div className="jobs-container">
