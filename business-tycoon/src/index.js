@@ -3,8 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import { auth } from './config/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, onAuthStateChanged } from './config/firebase';
 
 // Firebase initialization wrapper component
 function FirebaseInitWrapper() {

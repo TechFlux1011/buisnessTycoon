@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
+  auth, 
+  db, 
+  googleProvider, 
+  appleProvider,
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut, 
@@ -7,12 +11,11 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult,
-  signInAnonymously
-} from 'firebase/auth';
-import { auth, db, googleProvider, appleProvider } from '../config/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+  signInAnonymously,
+  doc,
+  setDoc
+} from '../config/firebase';
 
 const AuthContext = createContext();
 

@@ -1,5 +1,4 @@
-import { db } from '../config/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { db, doc, getDoc, setDoc, updateDoc } from '../config/firebase';
 
 class SaveDataService {
   // Save game state to Firestore
